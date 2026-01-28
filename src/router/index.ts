@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -16,6 +17,15 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../components/LoginPage.vue'),
     meta: {
       title: '會員登入'
+    }
+  },
+  {
+    path: '/user',
+    name: 'User',
+    component: () => import('../views/UserPage.vue'),
+    meta: {
+      title: '個人資訊',
+      requiresAuth: true
     }
   },
   {
@@ -41,9 +51,18 @@ const router = createRouter({
   routes
 })
 
-// 路由守衛 - 設定頁面標題
+// 路由守衛
 router.beforeEach((to, _from, next) => {
   document.title = `${to.meta.title || '頁面'} | Vue Demo`
+
+  if (to.meta.requiresAuth) {
+    const authStore = useAuthStore()
+    if (!authStore.isLoggedIn) {
+      next('/login')
+      return
+    }
+  }
+
   next()
 })
 

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { UserService, ApiError } from '../api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -23,28 +24,25 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
-    const response = await fetch('/api/users/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        uid: username.value,
-        password: password.value
-      })
+    const response = await UserService.loginUser({
+      username: username.value,
+      password: password.value
     })
 
-    if (response.status === 200) {
-      const data = await response.json()
-      authStore.login({ uid: username.value, ...data }, data.token || '')
-      router.push('/')
-    } else if (response.status === 404) {
-      errorMessage.value = '帳號或密碼錯誤，請重新輸入'
-    } else {
-      errorMessage.value = '登入失敗，請稍後再試'
-    }
+    authStore.login(response.user, response.access_token, response.expires_in)
+    router.push('/user')
   } catch (error) {
-    errorMessage.value = '網路連線錯誤，請檢查網路狀態'
+    if (error instanceof ApiError) {
+      if (error.status === 401) {
+        errorMessage.value = '帳號或密碼錯誤，請重新輸入'
+      } else if (error.status === 422) {
+        errorMessage.value = '輸入格式有誤，請檢查帳號密碼'
+      } else {
+        errorMessage.value = '登入失敗，請稍後再試'
+      }
+    } else {
+      errorMessage.value = '網路連線錯誤，請檢查網路狀態'
+    }
   } finally {
     isLoading.value = false
   }

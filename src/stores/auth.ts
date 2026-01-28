@@ -1,31 +1,36 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-
-interface User {
-  uid: string
-  name?: string
-  token?: string
-}
+import { ref, computed, watch } from 'vue'
+import { OpenAPI } from '../api'
+import type { LoginUserInfo } from '../api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
+  const user = ref<LoginUserInfo | null>(null)
+  const accessToken = ref<string | null>(null)
+  const expiresIn = ref<number | null>(null)
 
-  const isLoggedIn = computed(() => !!token.value)
+  const isLoggedIn = computed(() => !!accessToken.value)
 
-  const login = (userData: User, authToken: string) => {
+  // 同步 token 到 OpenAPI 配置
+  watch(accessToken, (token) => {
+    OpenAPI.TOKEN = token || undefined
+  }, { immediate: true })
+
+  const login = (userData: LoginUserInfo, token: string, expires: number) => {
     user.value = userData
-    token.value = authToken
+    accessToken.value = token
+    expiresIn.value = expires
   }
 
   const logout = () => {
     user.value = null
-    token.value = null
+    accessToken.value = null
+    expiresIn.value = null
   }
 
   return {
     user,
-    token,
+    accessToken,
+    expiresIn,
     isLoggedIn,
     login,
     logout
