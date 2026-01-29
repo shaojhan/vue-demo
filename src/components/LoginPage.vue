@@ -146,7 +146,7 @@ const handleLogin = async () => {
           <div class="input-group">
             <div class="label-row">
               <label for="password">密碼</label>
-              <a href="#" class="forgot-link">忘記密碼？</a>
+              <RouterLink to="/forgot-password" class="forgot-link">忘記密碼？</RouterLink>
             </div>
             <div class="input-field">
               <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

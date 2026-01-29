@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { UserService, ApiError } from '../api'
 import type { CurrentUserResponse } from '../api'
@@ -25,85 +25,12 @@ const fetchUser = async () => {
       authStore.logout()
       router.push('/login')
     }
-    // 網路錯誤時使用 store 中的資料
   } finally {
     isLoading.value = false
   }
 }
 
 onMounted(fetchUser)
-
-// 修改密碼
-const showPasswordModal = ref(false)
-const oldPassword = ref('')
-const newPassword = ref('')
-const confirmNewPassword = ref('')
-const passwordError = ref('')
-const passwordSuccess = ref('')
-const isChanging = ref(false)
-
-const openPasswordModal = () => {
-  oldPassword.value = ''
-  newPassword.value = ''
-  confirmNewPassword.value = ''
-  passwordError.value = ''
-  passwordSuccess.value = ''
-  showPasswordModal.value = true
-}
-
-const handleChangePassword = async () => {
-  if (!oldPassword.value || !newPassword.value || !confirmNewPassword.value) {
-    passwordError.value = '請填寫所有欄位'
-    return
-  }
-
-  if (newPassword.value !== confirmNewPassword.value) {
-    passwordError.value = '兩次輸入的新密碼不一致'
-    return
-  }
-
-  if (newPassword.value.length < 6) {
-    passwordError.value = '新密碼長度至少需要 6 個字元'
-    return
-  }
-
-  if (!currentUser.value?.id) {
-    passwordError.value = '無法取得使用者資訊'
-    return
-  }
-
-  isChanging.value = true
-  passwordError.value = ''
-  passwordSuccess.value = ''
-
-  try {
-    await UserService.updatePassword({
-      user_id: currentUser.value.id,
-      old_password: oldPassword.value,
-      new_password: newPassword.value
-    })
-
-    passwordSuccess.value = '密碼修改成功！'
-    oldPassword.value = ''
-    newPassword.value = ''
-    confirmNewPassword.value = ''
-    setTimeout(() => {
-      showPasswordModal.value = false
-    }, 1500)
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (error.status === 401) {
-        passwordError.value = '舊密碼不正確'
-      } else {
-        passwordError.value = '修改失敗，請稍後再試'
-      }
-    } else {
-      passwordError.value = '網路連線錯誤，請檢查網路狀態'
-    }
-  } finally {
-    isChanging.value = false
-  }
-}
 
 const handleLogout = () => {
   authStore.logout()
@@ -256,95 +183,16 @@ const handleLogout = () => {
         </div>
 
         <div class="action-section">
-          <button class="change-pwd-btn" @click="openPasswordModal">
+          <RouterLink to="/change-password" class="change-pwd-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0110 0v4"/>
             </svg>
             修改密碼
-          </button>
+          </RouterLink>
         </div>
       </template>
     </main>
-
-    <!-- 修改密碼 Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showPasswordModal" class="modal-overlay" @click.self="showPasswordModal = false">
-          <div class="modal-card">
-            <div class="modal-header">
-              <h3>修改密碼</h3>
-              <button class="modal-close" @click="showPasswordModal = false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="handleChangePassword" class="modal-form">
-              <Transition name="fade">
-                <div v-if="passwordError" class="modal-alert error">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 8v4M12 16h.01"/>
-                  </svg>
-                  <span>{{ passwordError }}</span>
-                </div>
-              </Transition>
-
-              <Transition name="fade">
-                <div v-if="passwordSuccess" class="modal-alert success">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                  <span>{{ passwordSuccess }}</span>
-                </div>
-              </Transition>
-
-              <div class="modal-field">
-                <label>舊密碼</label>
-                <input
-                  v-model="oldPassword"
-                  type="password"
-                  placeholder="請輸入目前的密碼"
-                  autocomplete="current-password"
-                />
-              </div>
-
-              <div class="modal-field">
-                <label>新密碼</label>
-                <input
-                  v-model="newPassword"
-                  type="password"
-                  placeholder="請輸入新密碼（至少 6 位）"
-                  autocomplete="new-password"
-                />
-              </div>
-
-              <div class="modal-field">
-                <label>確認新密碼</label>
-                <input
-                  v-model="confirmNewPassword"
-                  type="password"
-                  placeholder="請再次輸入新密碼"
-                  autocomplete="new-password"
-                />
-              </div>
-
-              <div class="modal-actions">
-                <button type="button" class="btn-cancel" @click="showPasswordModal = false">取消</button>
-                <button type="submit" class="btn-confirm" :disabled="isChanging">
-                  <span v-if="isChanging">修改中...</span>
-                  <span v-else>確認修改</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -598,198 +446,8 @@ const handleLogout = () => {
   height: 20px;
 }
 
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 24px;
-}
-
-.modal-card {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 28px 0;
-}
-
-.modal-header h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-}
-
-.modal-close {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.modal-close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-.modal-close svg {
-  width: 18px;
-  height: 18px;
-}
-
-.modal-form {
-  padding: 24px 28px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.modal-alert {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-.modal-alert svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.modal-alert.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-}
-
-.modal-alert.success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #16a34a;
-}
-
-.modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.modal-field label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.modal-field input {
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
-  color: #1e293b;
-  background: white;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.modal-field input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.modal-field input::placeholder {
-  color: #94a3b8;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 6px;
-}
-
-.btn-cancel, .btn-confirm {
-  flex: 1;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
-}
-
-.btn-cancel:hover {
-  background: #e2e8f0;
-}
-
-.btn-confirm {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border: none;
-  color: white;
-}
-
-.btn-confirm:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-}
-
-.btn-confirm:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Modal 動畫 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .modal-card,
-.modal-leave-to .modal-card {
-  transform: scale(0.95) translateY(10px);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+.change-pwd-btn {
+  text-decoration: none;
 }
 
 /* RWD */
@@ -808,10 +466,6 @@ const handleLogout = () => {
 
   .info-card {
     padding: 18px;
-  }
-
-  .modal-card {
-    margin: 16px;
   }
 }
 </style>
