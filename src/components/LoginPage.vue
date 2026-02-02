@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { UserService, ApiError } from '../api'
+import { useAuthStore } from '@/stores/auth'
+import { UserService, ApiError } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -13,6 +13,8 @@ const rememberMe = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
+const isUnverified = ref(false)
+const isResending = ref(false)
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
@@ -22,6 +24,7 @@ const handleLogin = async () => {
 
   isLoading.value = true
   errorMessage.value = ''
+  isUnverified.value = false
 
   try {
     const response = await UserService.loginUser({
@@ -33,7 +36,10 @@ const handleLogin = async () => {
     router.push('/user')
   } catch (error) {
     if (error instanceof ApiError) {
-      if (error.status === 401) {
+      if (error.status === 403) {
+        isUnverified.value = true
+        errorMessage.value = '您的帳號尚未完成信箱驗證，請查收驗證郵件並完成驗證後再登入。'
+      } else if (error.status === 401) {
         errorMessage.value = '帳號或密碼錯誤，請重新輸入'
       } else if (error.status === 422) {
         errorMessage.value = '輸入格式有誤，請檢查帳號密碼'
@@ -45,6 +51,28 @@ const handleLogin = async () => {
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleGoogleLogin = () => {
+  window.location.href = '/api/auth/google/login'
+}
+
+const handleResendVerification = async () => {
+  if (!username.value) {
+    errorMessage.value = '請先輸入電子郵件'
+    return
+  }
+
+  isResending.value = true
+  try {
+    await UserService.resendVerification({ email: username.value })
+    errorMessage.value = '驗證郵件已重新發送，請查收信箱。'
+    isUnverified.value = false
+  } catch {
+    errorMessage.value = '發送失敗，請稍後再試'
+  } finally {
+    isResending.value = false
   }
 }
 </script>
@@ -117,12 +145,17 @@ const handleLogin = async () => {
 
         <form @submit.prevent="handleLogin" class="login-form">
           <Transition name="fade">
-            <div v-if="errorMessage" class="error-alert">
+            <div v-if="errorMessage" :class="['error-alert', { warning: isUnverified }]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
                 <path d="M12 8v4M12 16h.01"/>
               </svg>
-              <span>{{ errorMessage }}</span>
+              <div class="alert-content">
+                <span>{{ errorMessage }}</span>
+                <button v-if="isUnverified" type="button" class="resend-btn" :disabled="isResending" @click="handleResendVerification">
+                  {{ isResending ? '發送中...' : '重新發送驗證郵件' }}
+                </button>
+              </div>
             </div>
           </Transition>
 
@@ -196,7 +229,7 @@ const handleLogin = async () => {
           </div>
 
           <div class="social-buttons">
-            <button type="button" class="social-btn">
+            <button type="button" class="social-btn" @click="handleGoogleLogin">
               <svg viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
