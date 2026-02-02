@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { UserService, ApiError } from '../api'
+import { useAuthStore } from '@/stores/auth'
+import { UserService, ApiError } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()

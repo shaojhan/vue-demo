@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { UserService, ApiError } from '../api'
+import { UserService, ApiError } from '@/api'
 
 const email = ref('')
 const isLoading = ref(false)

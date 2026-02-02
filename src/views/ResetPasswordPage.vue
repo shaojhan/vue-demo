@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { UserService, ApiError } from '../api'
+import { UserService, ApiError } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
