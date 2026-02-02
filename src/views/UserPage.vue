@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { UserService, ApiError } from '../api'
-import type { CurrentUserResponse } from '../api'
+import { useAuthStore } from '@/stores/auth'
+import { UserService, ApiError } from '@/api'
+import type { CurrentUserResponse } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -183,6 +183,12 @@ const handleLogout = () => {
         </div>
 
         <div class="action-section">
+          <RouterLink v-if="authStore.user?.role === 'ADMIN'" to="/admin" class="admin-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            管理員後台
+          </RouterLink>
           <RouterLink to="/change-password" class="change-pwd-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -448,6 +454,32 @@ const handleLogout = () => {
 
 .change-pwd-btn {
   text-decoration: none;
+}
+
+.admin-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.admin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+}
+
+.admin-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* RWD */
