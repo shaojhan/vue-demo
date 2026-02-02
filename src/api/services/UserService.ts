@@ -4,14 +4,42 @@
 /* eslint-disable */
 import type { Body_login_user } from '../models/Body_login_user';
 import type { CurrentUserResponse } from '../models/CurrentUserResponse';
+import type { ForgotPasswordRequest } from '../models/ForgotPasswordRequest';
 import type { LoginResponse } from '../models/LoginResponse';
+import type { ResendVerificationRequest } from '../models/ResendVerificationRequest';
+import type { ResetPasswordRequest } from '../models/ResetPasswordRequest';
 import type { UpdatePasswordRequest } from '../models/UpdatePasswordRequest';
 import type { UpdateProfileRequest } from '../models/UpdateProfileRequest';
+import type { UserListResponse } from '../models/UserListResponse';
 import type { UserSchema } from '../models/UserSchema';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class UserService {
+    /**
+     * List Users
+     * List all users with pagination (Admin only).
+     * @param page 頁碼
+     * @param size 每頁筆數
+     * @returns UserListResponse Successful Response
+     * @throws ApiError
+     */
+    public static listUsers(
+        page: number = 1,
+        size: number = 20,
+    ): CancelablePromise<UserListResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/',
+            query: {
+                'page': page,
+                'size': size,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
     /**
      * Get Me
      * Get the currently authenticated user's information.
@@ -26,7 +54,7 @@ export class UserService {
     }
     /**
      * Create User
-     * Create a new user with profile.
+     * Create a new user with profile. A verification email will be sent.
      * @param requestBody
      * @returns any Successful Response
      * @throws ApiError
@@ -60,6 +88,87 @@ export class UserService {
             url: '/users/login',
             formData: formData,
             mediaType: 'application/x-www-form-urlencoded',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Verify Email
+     * Verify user email with token from verification email.
+     * @param token 驗證 token
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static verifyEmail(
+        token: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/verify-email',
+            query: {
+                'token': token,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Resend Verification
+     * Resend verification email.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static resendVerification(
+        requestBody: ResendVerificationRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/resend-verification',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Forgot Password
+     * Send a password reset email.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static forgotPassword(
+        requestBody: ForgotPasswordRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/forgot-password',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Reset Password
+     * Reset password using a reset token.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static resetPassword(
+        requestBody: ResetPasswordRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/reset-password',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
