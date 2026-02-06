@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Body_login_user } from '../models/Body_login_user';
+import type { Body_upload_avatar } from '../models/Body_upload_avatar';
 import type { CurrentUserResponse } from '../models/CurrentUserResponse';
 import type { ForgotPasswordRequest } from '../models/ForgotPasswordRequest';
 import type { LoginResponse } from '../models/LoginResponse';
@@ -234,6 +235,29 @@ export class UserService {
             url: '/users/profile/update',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Upload Avatar
+     * Upload user avatar (multipart/form-data).
+     *
+     * Supported formats: jpg, jpeg, png, gif, webp
+     * Max file size: 5MB
+     * @param formData
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static uploadAvatar(
+        formData: Body_upload_avatar,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/avatar',
+            formData: formData,
+            mediaType: 'multipart/form-data',
             errors: {
                 422: `Validation Error`,
             },

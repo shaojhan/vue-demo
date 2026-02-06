@@ -11,6 +11,11 @@ const authStore = useAuthStore()
 const currentUser = ref<CurrentUserResponse | null>(null)
 const isLoading = ref(true)
 
+// 頭像上傳
+const avatarInput = ref<HTMLInputElement | null>(null)
+const isUploading = ref(false)
+const uploadError = ref('')
+
 const roleLabel: Record<string, string> = {
   ADMIN: '管理員',
   EMPLOYEE: '員工',
@@ -35,6 +40,50 @@ onMounted(fetchUser)
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
+}
+
+// 點擊頭像觸發檔案選擇
+const triggerAvatarUpload = () => {
+  avatarInput.value?.click()
+}
+
+// 處理頭像上傳
+const handleAvatarChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  // 檢查檔案類型
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    uploadError.value = '不支援的檔案格式，請上傳 jpg, png, gif 或 webp 格式'
+    return
+  }
+
+  // 檢查檔案大小 (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    uploadError.value = '檔案大小超過 5MB 限制'
+    return
+  }
+
+  isUploading.value = true
+  uploadError.value = ''
+
+  try {
+    await UserService.uploadAvatar({ file })
+    // 重新載入用戶資料以取得新頭像
+    await fetchUser()
+  } catch (error) {
+    if (error instanceof ApiError) {
+      uploadError.value = '上傳失敗，請稍後再試'
+    } else {
+      uploadError.value = '網路連線錯誤'
+    }
+  } finally {
+    isUploading.value = false
+    // 清空 input 以便可以再次選擇相同檔案
+    input.value = ''
+  }
 }
 </script>
 
@@ -75,8 +124,28 @@ const handleLogout = () => {
 
       <template v-else>
         <div class="welcome-section">
-          <div class="avatar">
-            <span>{{ (currentUser?.profile?.name || currentUser?.uid || '?').charAt(0).toUpperCase() }}</span>
+          <div class="avatar-wrapper">
+            <div class="avatar" :class="{ clickable: !isUploading }" @click="triggerAvatarUpload">
+              <img v-if="currentUser?.profile?.avatar" :src="currentUser.profile.avatar" alt="頭像" class="avatar-img" />
+              <span v-else>{{ (currentUser?.profile?.name || currentUser?.uid || '?').charAt(0).toUpperCase() }}</span>
+              <div class="avatar-overlay" :class="{ uploading: isUploading }">
+                <svg v-if="isUploading" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </div>
+            </div>
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              class="avatar-input"
+              @change="handleAvatarChange"
+            />
+            <p v-if="uploadError" class="upload-error">{{ uploadError }}</p>
           </div>
           <h1>歡迎回來，{{ currentUser?.profile?.name || currentUser?.uid }}</h1>
           <p class="welcome-sub">這是您的個人資訊頁面</p>
@@ -302,22 +371,75 @@ const handleLogout = () => {
   margin-bottom: 48px;
 }
 
+.avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .avatar {
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar.clickable {
+  cursor: pointer;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar span {
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 700;
   color: white;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.avatar-overlay.uploading {
+  opacity: 1;
+}
+
+.avatar:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-overlay svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
+.avatar-input {
+  display: none;
+}
+
+.upload-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #dc2626;
 }
 
 .welcome-section h1 {

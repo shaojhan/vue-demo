@@ -18,5 +18,9 @@ export type CurrentUserProfileResponse = {
      * 自我介紹
      */
     description?: (string | null);
+    /**
+     * 頭像 URL
+     */
+    avatar?: (string | null);
 };
 

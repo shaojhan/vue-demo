@@ -11,6 +11,7 @@ export type { AssignEmployeeRequest } from './models/AssignEmployeeRequest';
 export type { AssignEmployeeResponse } from './models/AssignEmployeeResponse';
 export type { BatchMarkReadRequest } from './models/BatchMarkReadRequest';
 export type { Body_login_user } from './models/Body_login_user';
+export type { Body_upload_avatar } from './models/Body_upload_avatar';
 export type { Body_upload_employees_csv } from './models/Body_upload_employees_csv';
 export type { CsvUploadResponse } from './models/CsvUploadResponse';
 export type { CsvUploadResultItem } from './models/CsvUploadResultItem';
