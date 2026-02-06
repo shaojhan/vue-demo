@@ -1084,6 +1084,7 @@ onMounted(() => {
   border-radius: 10px;
   font-size: 15px;
   color: #1e293b;
+  background: white;
   transition: all 0.2s;
   box-sizing: border-box;
 }
@@ -1343,6 +1344,8 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 14px;
+  color: #1e293b;
+  background: white;
   resize: none;
   box-sizing: border-box;
 }
