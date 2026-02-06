@@ -6,32 +6,44 @@ import type { LoginUserInfo } from '@/api'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<LoginUserInfo | null>(null)
   const accessToken = ref<string | null>(null)
-  const expiresIn = ref<number | null>(null)
+  const expiresAt = ref<number | null>(null) // 過期時間戳 (ms)
 
-  const isLoggedIn = computed(() => !!accessToken.value)
+  // 檢查 token 是否有效（存在且未過期）
+  const isLoggedIn = computed(() => {
+    if (!accessToken.value || !expiresAt.value) return false
+    return Date.now() < expiresAt.value
+  })
+
+  // 檢查 token 是否已過期
+  const isExpired = computed(() => {
+    if (!expiresAt.value) return false
+    return Date.now() >= expiresAt.value
+  })
 
   // 同步 token 到 OpenAPI 配置
   watch(accessToken, (token) => {
     OpenAPI.TOKEN = token || undefined
   }, { immediate: true })
 
-  const login = (userData: LoginUserInfo, token: string, expires: number) => {
+  const login = (userData: LoginUserInfo, token: string, expiresIn: number) => {
     user.value = userData
     accessToken.value = token
-    expiresIn.value = expires
+    // 將 expiresIn（秒）轉換為過期時間戳
+    expiresAt.value = Date.now() + expiresIn * 1000
   }
 
   const logout = () => {
     user.value = null
     accessToken.value = null
-    expiresIn.value = null
+    expiresAt.value = null
   }
 
   return {
     user,
     accessToken,
-    expiresIn,
+    expiresAt,
     isLoggedIn,
+    isExpired,
     login,
     logout
   }

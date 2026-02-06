@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { UserService, ApiError } from '@/api'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const username = ref('')
@@ -15,6 +16,14 @@ const errorMessage = ref('')
 const showPassword = ref(false)
 const isUnverified = ref(false)
 const isResending = ref(false)
+const isSessionExpired = ref(false)
+
+// 檢查是否因 token 過期而跳轉
+onMounted(() => {
+  if (route.query.expired === '1') {
+    isSessionExpired.value = true
+  }
+})
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
@@ -144,6 +153,16 @@ const handleResendVerification = async () => {
         </div>
 
         <form @submit.prevent="handleLogin" class="login-form">
+          <Transition name="fade">
+            <div v-if="isSessionExpired" class="info-alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              <span>您的登入已過期，請重新登入</span>
+            </div>
+          </Transition>
+
           <Transition name="fade">
             <div v-if="errorMessage" :class="['error-alert', { warning: isUnverified }]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -423,6 +442,25 @@ const handleResendVerification = async () => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 提示訊息 */
+.info-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #2563eb;
+  font-size: 14px;
+}
+
+.info-alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 /* 錯誤提示 */

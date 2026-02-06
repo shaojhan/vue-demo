@@ -100,6 +100,14 @@ router.beforeEach((to, _from, next) => {
 
   if (to.meta.requiresAuth) {
     const authStore = useAuthStore()
+
+    // Token 過期處理
+    if (authStore.isExpired) {
+      authStore.logout()
+      next({ path: '/login', query: { expired: '1' } })
+      return
+    }
+
     if (!authStore.isLoggedIn) {
       next('/login')
       return
