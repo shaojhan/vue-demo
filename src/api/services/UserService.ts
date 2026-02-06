@@ -12,6 +12,7 @@ import type { UpdatePasswordRequest } from '../models/UpdatePasswordRequest';
 import type { UpdateProfileRequest } from '../models/UpdateProfileRequest';
 import type { UserListResponse } from '../models/UserListResponse';
 import type { UserSchema } from '../models/UserSchema';
+import type { UserSearchResponse } from '../models/UserSearchResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -34,6 +35,30 @@ export class UserService {
             query: {
                 'page': page,
                 'size': size,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Search Users
+     * Search users by keyword (uid, email, or name). For all logged-in users.
+     * @param keyword 搜尋關鍵字（帳號、郵件或姓名）
+     * @param limit 最大結果數
+     * @returns UserSearchResponse Successful Response
+     * @throws ApiError
+     */
+    public static searchUsers(
+        keyword: string,
+        limit: number = 20,
+    ): CancelablePromise<UserSearchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/search',
+            query: {
+                'keyword': keyword,
+                'limit': limit,
             },
             errors: {
                 422: `Validation Error`,

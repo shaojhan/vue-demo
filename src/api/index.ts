@@ -41,6 +41,8 @@ export type { UserListItem } from './models/UserListItem';
 export type { UserListResponse } from './models/UserListResponse';
 export { UserRole } from './models/UserRole';
 export type { UserSchema } from './models/UserSchema';
+export type { UserSearchItem } from './models/UserSearchItem';
+export type { UserSearchResponse } from './models/UserSearchResponse';
 export type { ValidationError } from './models/ValidationError';
 
 export { DefaultService } from './services/DefaultService';

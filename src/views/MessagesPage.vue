@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { MessageService, UserService, ApiError } from '@/api'
-import type { MessageListItem, MessageThreadResponse, UserListItem } from '@/api'
+import type { MessageListItem, MessageThreadResponse, UserSearchItem } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -34,7 +34,7 @@ const composeSuccess = ref(false)
 
 // 收件人搜尋
 const recipientSearch = ref('')
-const recipientOptions = ref<UserListItem[]>([])
+const recipientOptions = ref<UserSearchItem[]>([])
 const recipientLoading = ref(false)
 
 // 訊息詳情 Modal
@@ -79,12 +79,8 @@ const searchRecipients = async () => {
   }
   recipientLoading.value = true
   try {
-    const res = await UserService.listUsers(1, 10)
-    // 過濾包含搜尋字串的用戶
-    recipientOptions.value = res.items.filter(u =>
-      u.uid.toLowerCase().includes(recipientSearch.value.toLowerCase()) ||
-      u.email.toLowerCase().includes(recipientSearch.value.toLowerCase())
-    )
+    const res = await UserService.searchUsers(recipientSearch.value, 10)
+    recipientOptions.value = res.items
   } catch {
     recipientOptions.value = []
   } finally {
@@ -93,7 +89,7 @@ const searchRecipients = async () => {
 }
 
 // 選擇收件人
-const selectRecipient = (user: UserListItem) => {
+const selectRecipient = (user: UserSearchItem) => {
   composeRecipientId.value = user.id
   recipientSearch.value = `${user.uid} (${user.email})`
   recipientOptions.value = []
