@@ -70,6 +70,15 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/messages',
+    name: 'Messages',
+    component: () => import('@/views/MessagesPage.vue'),
+    meta: {
+      title: '訊息中心',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/AdminPage.vue'),

@@ -183,6 +183,12 @@ const handleLogout = () => {
         </div>
 
         <div class="action-section">
+          <RouterLink to="/messages" class="messages-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+            訊息中心
+          </RouterLink>
           <RouterLink v-if="authStore.user?.role === 'ADMIN'" to="/admin" class="admin-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -454,6 +460,32 @@ const handleLogout = () => {
 
 .change-pwd-btn {
   text-decoration: none;
+}
+
+.messages-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.messages-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.messages-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .admin-btn {
