@@ -4,7 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { EmployeeService, UserService, ApiError } from '@/api'
 import { Department } from '@/api'
-import type { AssignEmployeeResponse, UserListItem, EmployeeListItem } from '@/api'
+import type { AssignEmployeeResponse, UserListItem, EmployeeListItem, CsvUploadResponse } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -33,6 +33,12 @@ const employeePage = ref(1)
 const employeePageSize = 10
 const employeeLoading = ref(false)
 const employeeTotalPages = computed(() => Math.ceil(employeeTotal.value / employeePageSize))
+
+// CSV 上傳
+const csvFile = ref<File | null>(null)
+const csvUploading = ref(false)
+const csvError = ref('')
+const csvResult = ref<CsvUploadResponse | null>(null)
 
 const departmentLabels: Record<Department, string> = {
   [Department.HR]: '人力資源部',
@@ -128,6 +134,50 @@ const handleSubmit = async () => {
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
+}
+
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  csvFile.value = target.files?.[0] || null
+  csvError.value = ''
+  csvResult.value = null
+}
+
+const handleCsvUpload = async () => {
+  if (!csvFile.value) {
+    csvError.value = '請先選擇 CSV 檔案'
+    return
+  }
+
+  csvUploading.value = true
+  csvError.value = ''
+  csvResult.value = null
+
+  try {
+    const result = await EmployeeService.uploadEmployeesCsv({ file: csvFile.value })
+    csvResult.value = result
+    csvFile.value = null
+    // 清空 file input
+    const fileInput = document.getElementById('csvFile') as HTMLInputElement
+    if (fileInput) fileInput.value = ''
+    // 重新載入列表
+    fetchUsers()
+    fetchEmployees()
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 403) {
+        csvError.value = '您沒有管理員權限'
+      } else if (error.status === 422) {
+        csvError.value = 'CSV 格式錯誤，請檢查檔案內容'
+      } else {
+        csvError.value = '上傳失敗，請稍後再試'
+      }
+    } else {
+      csvError.value = '網路連線錯誤，請檢查網路狀態'
+    }
+  } finally {
+    csvUploading.value = false
+  }
 }
 </script>
 
@@ -294,6 +344,126 @@ const handleLogout = () => {
             <span v-else>指派員工</span>
           </button>
         </form>
+      </section>
+
+      <!-- CSV 批次上傳 -->
+      <section class="section-card">
+        <div class="section-header">
+          <div class="section-icon csv-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div>
+            <h2>CSV 批次建立員工</h2>
+            <p>上傳 CSV 檔案批次建立員工帳號（若會員不存在將自動建立）</p>
+          </div>
+        </div>
+
+        <div class="csv-format-hint">
+          <div class="hint-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 16v-4M12 8h.01"/>
+            </svg>
+            CSV 格式說明
+          </div>
+          <code class="hint-code">idno,department,email,uid,role_id<br/>EMP001,IT,john@example.com,john,1<br/>EMP002,HR,jane@example.com,jane,2</code>
+          <div class="hint-note">
+            部門代碼：IT、HR、PR、RD、BD
+          </div>
+        </div>
+
+        <div class="upload-area">
+          <Transition name="fade">
+            <div v-if="csvError" class="error-alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4M12 16h.01"/>
+              </svg>
+              <span>{{ csvError }}</span>
+            </div>
+          </Transition>
+
+          <Transition name="fade">
+            <div v-if="csvResult" class="upload-result">
+              <div class="result-summary">
+                <div class="result-stat total">
+                  <span class="stat-value">{{ csvResult.total }}</span>
+                  <span class="stat-label">總筆數</span>
+                </div>
+                <div class="result-stat success">
+                  <span class="stat-value">{{ csvResult.success_count }}</span>
+                  <span class="stat-label">成功</span>
+                </div>
+                <div class="result-stat failure">
+                  <span class="stat-value">{{ csvResult.failure_count }}</span>
+                  <span class="stat-label">失敗</span>
+                </div>
+              </div>
+              <div v-if="csvResult.results.length > 0" class="result-details">
+                <div class="result-list">
+                  <div
+                    v-for="item in csvResult.results"
+                    :key="item.row"
+                    class="result-item"
+                    :class="{ success: item.success, failure: !item.success }"
+                  >
+                    <span class="item-row">第 {{ item.row }} 行</span>
+                    <span class="item-idno">{{ item.idno }}</span>
+                    <span class="item-status">
+                      <svg v-if="item.success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </span>
+                    <span class="item-message">{{ item.message }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Transition>
+
+          <div class="file-input-wrap">
+            <input
+              id="csvFile"
+              type="file"
+              accept=".csv"
+              @change="handleFileChange"
+              class="file-input"
+            />
+            <label for="csvFile" class="file-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span v-if="csvFile">{{ csvFile.name }}</span>
+              <span v-else>選擇 CSV 檔案</span>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            class="upload-btn"
+            :disabled="csvUploading || !csvFile"
+            @click="handleCsvUpload"
+          >
+            <span v-if="csvUploading" class="btn-loading">
+              <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+              </svg>
+              上傳中...
+            </span>
+            <span v-else>上傳並建立員工</span>
+          </button>
+        </div>
       </section>
 
       <!-- 會員列表 -->
@@ -585,6 +755,14 @@ const handleLogout = () => {
   color: #94a3b8;
 }
 
+.section-icon.csv-icon {
+  background: #ecfdf5;
+}
+
+.section-icon.csv-icon svg {
+  color: #10b981;
+}
+
 .section-header h2 {
   font-size: 20px;
   font-weight: 600;
@@ -754,6 +932,218 @@ const handleLogout = () => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* CSV 上傳 */
+.csv-format-hint {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.hint-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.hint-title svg {
+  width: 18px;
+  height: 18px;
+  color: #6366f1;
+}
+
+.hint-code {
+  display: block;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: monospace;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.hint-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.file-input-wrap {
+  position: relative;
+}
+
+.file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #fafafa;
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-label:hover {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.file-label svg {
+  width: 24px;
+  height: 24px;
+}
+
+.file-input:focus + .file-label {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.upload-btn {
+  padding: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.4);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-result {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.result-summary {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.result-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.result-stat:last-child {
+  border-right: none;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.result-stat.total .stat-value {
+  color: #6366f1;
+}
+
+.result-stat.success .stat-value {
+  color: #10b981;
+}
+
+.result-stat.failure .stat-value {
+  color: #ef4444;
+}
+
+.result-details {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.result-list {
+  padding: 8px;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.result-item:hover {
+  background: #f1f5f9;
+}
+
+.result-item.success .item-status svg {
+  color: #10b981;
+}
+
+.result-item.failure .item-status svg {
+  color: #ef4444;
+}
+
+.item-row {
+  color: #94a3b8;
+  min-width: 60px;
+}
+
+.item-idno {
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 80px;
+}
+
+.item-status svg {
+  width: 16px;
+  height: 16px;
+}
+
+.item-message {
+  flex: 1;
+  color: #64748b;
 }
 
 /* 表格 */
