@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { LoginResponse } from '../models/LoginResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -21,14 +20,14 @@ export class OauthService {
     }
     /**
      * Google Callback
-     * Handle Google OAuth2 callback. Exchanges code for token and creates/logs in user.
+     * Handle Google OAuth2 callback. Exchanges code for token and redirects to frontend.
      * @param code Authorization code from Google
-     * @returns LoginResponse Successful Response
+     * @returns any Successful Response
      * @throws ApiError
      */
     public static googleCallback(
         code: string,
-    ): CancelablePromise<LoginResponse> {
+    ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/auth/google/callback',
