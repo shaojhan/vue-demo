@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { UserService, ApiError } from '@/api'
@@ -15,6 +15,26 @@ const isLoading = ref(true)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const uploadError = ref('')
+
+// 計算完整頭像 URL
+const avatarUrl = computed(() => {
+  const avatar = currentUser.value?.profile?.avatar
+  if (!avatar) return null
+  // 如果是完整 URL，直接使用
+  if (avatar.startsWith('http')) {
+    return avatar
+  }
+  // 如果是 /uploads/ 開頭，加上 /api 前綴
+  if (avatar.startsWith('/uploads/')) {
+    return `/api${avatar}`
+  }
+  // 如果是其他 / 開頭的路徑，直接使用
+  if (avatar.startsWith('/')) {
+    return avatar
+  }
+  // 否則加上 /api/ 前綴
+  return `/api/${avatar}`
+})
 
 const roleLabel: Record<string, string> = {
   ADMIN: '管理員',
@@ -126,7 +146,7 @@ const handleAvatarChange = async (event: Event) => {
         <div class="welcome-section">
           <div class="avatar-wrapper">
             <div class="avatar" :class="{ clickable: !isUploading }" @click="triggerAvatarUpload">
-              <img v-if="currentUser?.profile?.avatar" :src="currentUser.profile.avatar" alt="頭像" class="avatar-img" />
+              <img v-if="avatarUrl" :src="avatarUrl" alt="頭像" class="avatar-img" />
               <span v-else>{{ (currentUser?.profile?.name || currentUser?.uid || '?').charAt(0).toUpperCase() }}</span>
               <div class="avatar-overlay" :class="{ uploading: isUploading }">
                 <svg v-if="isUploading" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -257,6 +277,15 @@ const handleAvatarChange = async (event: Event) => {
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
             訊息中心
+          </RouterLink>
+          <RouterLink v-if="authStore.user?.role === 'EMPLOYEE' || authStore.user?.role === 'ADMIN'" to="/schedules" class="schedule-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            排程管理
           </RouterLink>
           <RouterLink v-if="authStore.user?.role === 'ADMIN'" to="/admin" class="admin-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -552,6 +581,8 @@ const handleAvatarChange = async (event: Event) => {
   margin-top: 32px;
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .change-pwd-btn {
@@ -606,6 +637,32 @@ const handleAvatarChange = async (event: Event) => {
 }
 
 .messages-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.schedule-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.schedule-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.schedule-btn svg {
   width: 20px;
   height: 20px;
 }

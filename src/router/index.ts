@@ -79,6 +79,26 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/schedules',
+    name: 'Schedules',
+    component: () => import('@/views/SchedulePage.vue'),
+    meta: {
+      title: '排程管理',
+      requiresAuth: true,
+      requiresEmployee: true
+    }
+  },
+  {
+    path: '/schedules/google/select',
+    name: 'GoogleCalendarSelect',
+    component: () => import('@/views/GoogleCalendarSelectPage.vue'),
+    meta: {
+      title: '選擇 Google Calendar',
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/AdminPage.vue'),
@@ -125,6 +145,15 @@ router.beforeEach((to, _from, next) => {
     if (to.meta.requiresAdmin && authStore.user?.role !== 'ADMIN') {
       next('/')
       return
+    }
+
+    // 員工權限檢查（員工和管理員都可存取）
+    if (to.meta.requiresEmployee) {
+      const allowedRoles = ['EMPLOYEE', 'ADMIN']
+      if (!allowedRoles.includes(authStore.user?.role || '')) {
+        next('/user')
+        return
+      }
     }
   }
 
