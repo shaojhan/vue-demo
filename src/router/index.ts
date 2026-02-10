@@ -20,6 +20,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/sso',
+    name: 'SsoLogin',
+    component: () => import('@/views/SsoLoginPage.vue'),
+    meta: {
+      title: 'SSO 登入'
+    }
+  },
+  {
     path: '/user',
     name: 'User',
     component: () => import('@/views/UserPage.vue'),

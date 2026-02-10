@@ -264,6 +264,14 @@ const handleResendVerification = async () => {
               使用 GitHub 登入
             </button>
           </div>
+
+          <RouterLink to="/sso" class="sso-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+            使用 SSO 登入
+          </RouterLink>
         </form>
 
         <div class="login-footer">
@@ -727,6 +735,33 @@ const handleResendVerification = async () => {
   background: #24292e;
   border-color: #24292e;
   color: white;
+}
+
+/* SSO 連結 */
+.sso-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6366f1;
+  text-decoration: none;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.sso-link:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.sso-link svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* 底部 */
