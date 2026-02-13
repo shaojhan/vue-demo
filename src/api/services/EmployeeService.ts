@@ -5,8 +5,10 @@
 import type { AssignEmployeeRequest } from '../models/AssignEmployeeRequest';
 import type { AssignEmployeeResponse } from '../models/AssignEmployeeResponse';
 import type { Body_upload_employees_csv } from '../models/Body_upload_employees_csv';
+import type { Body_upload_employees_csv_async } from '../models/Body_upload_employees_csv_async';
 import type { CsvUploadResponse } from '../models/CsvUploadResponse';
 import type { EmployeeListResponse } from '../models/EmployeeListResponse';
+import type { TaskSubmitResponse } from '../models/TaskSubmitResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -72,6 +74,28 @@ export class EmployeeService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/employees/upload-csv',
+            formData: formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Batch create employees from CSV file asynchronously (Admin only)
+     * Upload a CSV file to batch-create employee accounts asynchronously.
+     * Returns a task_id for polling progress via GET /tasks/status/{task_id}.
+     * Only administrators can perform this action.
+     * @param formData
+     * @returns TaskSubmitResponse Successful Response
+     * @throws ApiError
+     */
+    public static uploadEmployeesCsvAsync(
+        formData: Body_upload_employees_csv_async,
+    ): CancelablePromise<TaskSubmitResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/employees/upload-csv-async',
             formData: formData,
             mediaType: 'multipart/form-data',
             errors: {

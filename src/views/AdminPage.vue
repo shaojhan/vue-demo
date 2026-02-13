@@ -1,44 +1,54 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, h, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { EmployeeService, UserService, ApiError } from '@/api'
 import { Department } from '@/api'
 import type { AssignEmployeeResponse, UserListItem, EmployeeListItem, CsvUploadResponse } from '@/api'
+import {
+  NButton, NCard, NSpin, NAlert, NInput, NInputNumber, NSelect,
+  NPagination, NSpace, NTag, NDataTable, NProgress
+} from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
+import { usePaginatedList } from '@/composables/usePaginatedList'
+import { useLogout } from '@/composables/useLogout'
+import { useTaskPolling } from '@/composables/useTaskPolling'
 
 const router = useRouter()
-const authStore = useAuthStore()
-
+const { logout: handleLogout } = useLogout()
 // 指派員工
 const userId = ref('')
 const idno = ref('')
 const department = ref<Department>(Department.IT)
-const roleId = ref<number | ''>('')
+const roleId = ref<number | null>(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const successResult = ref<AssignEmployeeResponse | null>(null)
 
 // 會員列表
-const users = ref<UserListItem[]>([])
-const userTotal = ref(0)
-const userPage = ref(1)
-const userPageSize = 10
-const userLoading = ref(false)
-const userTotalPages = computed(() => Math.ceil(userTotal.value / userPageSize))
+const { items: users, total: userTotal, page: userPage, pageSize: userPageSize, loading: userLoading, fetch: fetchUsers } = usePaginatedList(
+  (p) => UserService.listUsers(p, 10)
+)
 
 // 員工列表
-const employees = ref<EmployeeListItem[]>([])
-const employeeTotal = ref(0)
-const employeePage = ref(1)
-const employeePageSize = 10
-const employeeLoading = ref(false)
-const employeeTotalPages = computed(() => Math.ceil(employeeTotal.value / employeePageSize))
+const { items: employees, total: employeeTotal, page: employeePage, pageSize: employeePageSize, loading: employeeLoading, fetch: fetchEmployees } = usePaginatedList(
+  (p) => EmployeeService.listEmployees(p, 10)
+)
 
-// CSV 上傳
+// CSV 上傳 (非同步)
 const csvFile = ref<File | null>(null)
 const csvUploading = ref(false)
 const csvError = ref('')
 const csvResult = ref<CsvUploadResponse | null>(null)
+const { taskId: csvTaskId, status: csvTaskStatus, progress: csvTaskProgress, result: csvTaskResult, error: csvTaskError, isRunning: csvTaskRunning, start: startCsvTask, cancel: cancelCsvTask, reset: resetCsvTask } = useTaskPolling()
+
+// 任務完成時更新結果
+watch(csvTaskStatus, (s) => {
+  if (s === 'SUCCESS' && csvTaskResult.value) {
+    csvResult.value = csvTaskResult.value as CsvUploadResponse
+    fetchUsers()
+    fetchEmployees()
+  }
+})
 
 const departmentLabels: Record<Department, string> = {
   [Department.HR]: '人力資源部',
@@ -48,39 +58,61 @@ const departmentLabels: Record<Department, string> = {
   [Department.BD]: '業務部'
 }
 
+const departmentOptions = Object.entries(departmentLabels).map(([key, label]) => ({
+  label: `${label} (${key})`,
+  value: key
+}))
+
 const roleLabels: Record<string, string> = {
   ADMIN: '管理員',
   EMPLOYEE: '員工',
   NORMAL: '一般用戶'
 }
 
-const fetchUsers = async (page = 1) => {
-  userLoading.value = true
-  try {
-    const res = await UserService.listUsers(page, userPageSize)
-    users.value = res.items
-    userTotal.value = res.total
-    userPage.value = res.page
-  } catch {
-    users.value = []
-  } finally {
-    userLoading.value = false
+const roleTagType = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return 'warning' as const
+    case 'EMPLOYEE': return 'info' as const
+    default: return 'default' as const
   }
 }
 
-const fetchEmployees = async (page = 1) => {
-  employeeLoading.value = true
-  try {
-    const res = await EmployeeService.listEmployees(page, employeePageSize)
-    employees.value = res.items
-    employeeTotal.value = res.total
-    employeePage.value = res.page
-  } catch {
-    employees.value = []
-  } finally {
-    employeeLoading.value = false
+// 會員表格欄位
+const userColumns: DataTableColumns<UserListItem> = [
+  { title: '帳號', key: 'uid', width: 120, render: (row) => h('strong', row.uid) },
+  { title: 'Email', key: 'email' },
+  {
+    title: '角色', key: 'role', width: 100,
+    render: (row) => h(NTag, { size: 'small', type: roleTagType(row.role), bordered: false }, () => roleLabels[row.role] || row.role)
+  },
+  {
+    title: '信箱驗證', key: 'email_verified', width: 100,
+    render: (row) => h(NTag, { size: 'small', type: row.email_verified ? 'success' : 'error', bordered: false }, () => row.email_verified ? '已驗證' : '未驗證')
+  },
+  {
+    title: '建立時間', key: 'created_at', width: 120,
+    render: (row) => row.created_at?.slice(0, 10) || '-'
+  },
+  {
+    title: 'ID', key: 'id', width: 100,
+    render: (row) => h('span', { style: 'font-family: monospace; font-size: 13px; color: #64748b;' }, row.id.slice(0, 8) + '...')
   }
-}
+]
+
+// 員工表格欄位
+const employeeColumns: DataTableColumns<EmployeeListItem> = [
+  { title: '員工編號', key: 'idno', width: 120, render: (row) => h('strong', row.idno) },
+  {
+    title: '部門', key: 'department', width: 140,
+    render: (row) => h(NTag, { size: 'small', type: 'info', bordered: false }, () => departmentLabels[row.department] || row.department)
+  },
+  { title: '角色', key: 'role_name', render: (row) => row.role?.name || '-' },
+  { title: '權限等級', key: 'role_level', width: 100, render: (row) => `Lv.${row.role?.level ?? '-'}` },
+  {
+    title: '建立時間', key: 'created_at', width: 120,
+    render: (row) => row.created_at?.slice(0, 10) || '-'
+  }
+]
 
 onMounted(() => {
   fetchUsers()
@@ -107,7 +139,7 @@ const handleSubmit = async () => {
     successResult.value = result
     userId.value = ''
     idno.value = ''
-    roleId.value = ''
+    roleId.value = null
     fetchUsers()
     fetchEmployees()
   } catch (error) {
@@ -131,11 +163,6 @@ const handleSubmit = async () => {
   }
 }
 
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
-
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   csvFile.value = target.files?.[0] || null
@@ -152,17 +179,14 @@ const handleCsvUpload = async () => {
   csvUploading.value = true
   csvError.value = ''
   csvResult.value = null
+  resetCsvTask()
 
   try {
-    const result = await EmployeeService.uploadEmployeesCsv({ file: csvFile.value })
-    csvResult.value = result
+    const { task_id } = await EmployeeService.uploadEmployeesCsvAsync({ file: csvFile.value })
     csvFile.value = null
-    // 清空 file input
     const fileInput = document.getElementById('csvFile') as HTMLInputElement
     if (fileInput) fileInput.value = ''
-    // 重新載入列表
-    fetchUsers()
-    fetchEmployees()
+    startCsvTask(task_id)
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 403) {
@@ -178,6 +202,15 @@ const handleCsvUpload = async () => {
   } finally {
     csvUploading.value = false
   }
+}
+
+const csvTaskStatusLabel: Record<string, string> = {
+  PENDING: '排隊中',
+  STARTED: '處理中',
+  PROGRESS: '處理中',
+  SUCCESS: '完成',
+  FAILURE: '失敗',
+  REVOKED: '已取消'
 }
 </script>
 
@@ -199,23 +232,10 @@ const handleCsvUpload = async () => {
         <span>Vue Demo</span>
         <span class="nav-badge">管理後台</span>
       </div>
-      <div class="nav-actions">
-        <RouterLink to="/user" class="nav-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          個人頁面
-        </RouterLink>
-        <button class="logout-btn" @click="handleLogout">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          登出
-        </button>
-      </div>
+      <NSpace>
+        <NButton @click="router.push('/user')">個人頁面</NButton>
+        <NButton @click="handleLogout">登出</NButton>
+      </NSpace>
     </nav>
 
     <main class="admin-content">
@@ -225,370 +245,226 @@ const handleCsvUpload = async () => {
       </div>
 
       <!-- 指派員工 -->
-      <section class="section-card">
-        <div class="section-header">
-          <div class="section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="8.5" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/>
-              <line x1="23" y1="11" x2="17" y2="11"/>
-            </svg>
-          </div>
-          <div>
-            <h2>指派員工</h2>
-            <p>將現有會員帳號指派為員工身份</p>
-          </div>
-        </div>
+      <NCard title="指派員工" style="margin-bottom: 24px;">
+        <template #header-extra>
+          <span style="font-size: 14px; color: #64748b;">將現有會員帳號指派為員工身份</span>
+        </template>
 
-        <form @submit.prevent="handleSubmit" class="form">
-          <Transition name="fade">
-            <div v-if="errorMessage" class="error-alert">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 8v4M12 16h.01"/>
-              </svg>
-              <span>{{ errorMessage }}</span>
-            </div>
-          </Transition>
+        <form @submit.prevent="handleSubmit">
+          <NAlert v-if="errorMessage" type="error" :bordered="false" style="margin-bottom: 16px;">
+            {{ errorMessage }}
+          </NAlert>
 
-          <Transition name="fade">
-            <div v-if="successResult" class="success-alert">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-              <div>
-                <span>員工指派成功！</span>
-                <div class="success-detail">
-                  員工編號: {{ successResult.idno }} ｜
-                  部門: {{ departmentLabels[successResult.department] }} ｜
-                  角色: {{ successResult.role?.name || '-' }}
-                </div>
-              </div>
-            </div>
-          </Transition>
+          <NAlert v-if="successResult" type="success" :bordered="false" style="margin-bottom: 16px;">
+            員工指派成功！員工編號: {{ successResult.idno }} ｜
+            部門: {{ departmentLabels[successResult.department] }} ｜
+            角色: {{ successResult.role?.name || '-' }}
+          </NAlert>
 
           <div class="form-grid">
-            <div class="input-group">
-              <label for="userId">使用者 ID (UUID)</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <input
-                  id="userId"
-                  v-model="userId"
-                  type="text"
-                  placeholder="請輸入使用者 UUID"
-                />
-              </div>
+            <div class="form-group">
+              <label>使用者 ID (UUID)</label>
+              <NInput v-model:value="userId" placeholder="請輸入使用者 UUID" />
             </div>
 
-            <div class="input-group">
-              <label for="idno">員工編號</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="5" width="20" height="14" rx="2"/>
-                  <line x1="2" y1="10" x2="22" y2="10"/>
-                </svg>
-                <input
-                  id="idno"
-                  v-model="idno"
-                  type="text"
-                  placeholder="例如: EMP001"
-                />
-              </div>
+            <div class="form-group">
+              <label>員工編號</label>
+              <NInput v-model:value="idno" placeholder="例如: EMP001" />
             </div>
 
-            <div class="input-group">
-              <label for="department">部門</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-                <select id="department" v-model="department">
-                  <option v-for="(label, key) in departmentLabels" :key="key" :value="key">
-                    {{ label }} ({{ key }})
-                  </option>
-                </select>
-              </div>
+            <div class="form-group">
+              <label>部門</label>
+              <NSelect v-model:value="department" :options="departmentOptions" />
             </div>
 
-            <div class="input-group">
-              <label for="roleId">角色 ID</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                <input
-                  id="roleId"
-                  v-model="roleId"
-                  type="number"
-                  placeholder="請輸入角色 ID"
-                  min="1"
-                />
-              </div>
+            <div class="form-group">
+              <label>角色 ID</label>
+              <NInputNumber v-model:value="roleId" placeholder="請輸入角色 ID" :min="1" style="width: 100%;" />
             </div>
           </div>
 
-          <button type="submit" class="submit-btn" :disabled="isLoading">
-            <span v-if="isLoading" class="btn-loading">
-              <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              處理中...
-            </span>
-            <span v-else>指派員工</span>
-          </button>
+          <NButton
+            type="primary"
+            block
+            :loading="isLoading"
+            attr-type="submit"
+            style="margin-top: 20px;"
+          >
+            指派員工
+          </NButton>
         </form>
-      </section>
+      </NCard>
 
       <!-- CSV 批次上傳 -->
-      <section class="section-card">
-        <div class="section-header">
-          <div class="section-icon csv-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <line x1="9" y1="15" x2="15" y2="15"/>
-            </svg>
-          </div>
-          <div>
-            <h2>CSV 批次建立員工</h2>
-            <p>上傳 CSV 檔案批次建立員工帳號（若會員不存在將自動建立）</p>
-          </div>
-        </div>
+      <NCard title="CSV 批次建立員工" style="margin-bottom: 24px;">
+        <template #header-extra>
+          <span style="font-size: 14px; color: #64748b;">上傳 CSV 檔案批次建立員工帳號</span>
+        </template>
 
         <div class="csv-format-hint">
-          <div class="hint-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 16v-4M12 8h.01"/>
-            </svg>
-            CSV 格式說明
-          </div>
+          <div class="hint-title">CSV 格式說明</div>
           <code class="hint-code">idno,department,email,uid,role_id<br/>EMP001,IT,john@example.com,john,1<br/>EMP002,HR,jane@example.com,jane,2</code>
-          <div class="hint-note">
-            部門代碼：IT、HR、PR、RD、BD
-          </div>
+          <div class="hint-note">部門代碼：IT、HR、PR、RD、BD</div>
         </div>
 
-        <div class="upload-area">
-          <Transition name="fade">
-            <div v-if="csvError" class="error-alert">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 8v4M12 16h.01"/>
-              </svg>
-              <span>{{ csvError }}</span>
-            </div>
-          </Transition>
+        <NAlert v-if="csvError" type="error" :bordered="false" style="margin-bottom: 16px;">
+          {{ csvError }}
+        </NAlert>
 
-          <Transition name="fade">
-            <div v-if="csvResult" class="upload-result">
-              <div class="result-summary">
-                <div class="result-stat total">
-                  <span class="stat-value">{{ csvResult.total }}</span>
-                  <span class="stat-label">總筆數</span>
-                </div>
-                <div class="result-stat success">
-                  <span class="stat-value">{{ csvResult.success_count }}</span>
-                  <span class="stat-label">成功</span>
-                </div>
-                <div class="result-stat failure">
-                  <span class="stat-value">{{ csvResult.failure_count }}</span>
-                  <span class="stat-label">失敗</span>
-                </div>
-              </div>
-              <div v-if="csvResult.results.length > 0" class="result-details">
-                <div class="result-list">
-                  <div
-                    v-for="item in csvResult.results"
-                    :key="item.row"
-                    class="result-item"
-                    :class="{ success: item.success, failure: !item.success }"
-                  >
-                    <span class="item-row">第 {{ item.row }} 行</span>
-                    <span class="item-idno">{{ item.idno }}</span>
-                    <span class="item-status">
-                      <svg v-if="item.success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </span>
-                    <span class="item-message">{{ item.message }}</span>
-                  </div>
-                </div>
-              </div>
+        <!-- 任務進度 -->
+        <div v-if="csvTaskId" class="task-progress" style="margin-bottom: 16px;">
+          <div class="task-progress-header">
+            <div class="task-progress-info">
+              <NTag :type="csvTaskStatus === 'SUCCESS' ? 'success' : csvTaskStatus === 'FAILURE' ? 'error' : csvTaskStatus === 'REVOKED' ? 'warning' : 'info'" size="small">
+                {{ csvTaskStatusLabel[csvTaskStatus] || csvTaskStatus }}
+              </NTag>
+              <span class="task-id">{{ csvTaskId }}</span>
             </div>
-          </Transition>
+            <NSpace>
+              <NButton v-if="csvTaskRunning" size="small" type="error" secondary @click="cancelCsvTask">取消任務</NButton>
+              <NButton v-if="!csvTaskRunning" size="small" secondary @click="resetCsvTask">清除</NButton>
+            </NSpace>
+          </div>
 
-          <div class="file-input-wrap">
-            <input
-              id="csvFile"
-              type="file"
-              accept=".csv"
-              @change="handleFileChange"
-              class="file-input"
+          <div v-if="csvTaskStatus === 'PENDING' || csvTaskStatus === 'STARTED'" class="task-progress-body">
+            <NSpin size="small" />
+            <span class="task-progress-text">等待處理中...</span>
+          </div>
+
+          <div v-else-if="csvTaskStatus === 'PROGRESS' && csvTaskProgress" class="task-progress-body">
+            <NProgress
+              type="line"
+              :percentage="Math.round(csvTaskProgress.percent ?? 0)"
+              :show-indicator="true"
+              status="success"
             />
-            <label for="csvFile" class="file-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              <span v-if="csvFile">{{ csvFile.name }}</span>
-              <span v-else>選擇 CSV 檔案</span>
-            </label>
+            <div class="task-progress-detail">
+              <span>{{ csvTaskProgress.current ?? 0 }} / {{ csvTaskProgress.total ?? 0 }}</span>
+              <span v-if="csvTaskProgress.current_idno" class="task-current-item">{{ csvTaskProgress.current_idno }}</span>
+            </div>
           </div>
 
-          <button
-            type="button"
-            class="upload-btn"
-            :disabled="csvUploading || !csvFile"
-            @click="handleCsvUpload"
-          >
-            <span v-if="csvUploading" class="btn-loading">
-              <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              上傳中...
-            </span>
-            <span v-else>上傳並建立員工</span>
-          </button>
+          <div v-else-if="csvTaskStatus === 'FAILURE'" class="task-progress-body">
+            <NAlert type="error" :bordered="false">{{ csvTaskError || '任務執行失敗' }}</NAlert>
+          </div>
+
+          <div v-else-if="csvTaskStatus === 'REVOKED'" class="task-progress-body">
+            <NAlert type="warning" :bordered="false">任務已取消</NAlert>
+          </div>
         </div>
-      </section>
+
+        <!-- CSV 上傳結果 -->
+        <div v-if="csvResult" class="upload-result" style="margin-bottom: 16px;">
+          <div class="result-summary">
+            <div class="result-stat total">
+              <span class="stat-value">{{ csvResult.total }}</span>
+              <span class="stat-label">總筆數</span>
+            </div>
+            <div class="result-stat success">
+              <span class="stat-value">{{ csvResult.success_count }}</span>
+              <span class="stat-label">成功</span>
+            </div>
+            <div class="result-stat failure">
+              <span class="stat-value">{{ csvResult.failure_count }}</span>
+              <span class="stat-label">失敗</span>
+            </div>
+          </div>
+          <div v-if="csvResult.results.length > 0" class="result-details">
+            <div class="result-list">
+              <div
+                v-for="item in csvResult.results"
+                :key="item.row"
+                class="result-item"
+              >
+                <span class="item-row">第 {{ item.row }} 行</span>
+                <span class="item-idno">{{ item.idno }}</span>
+                <NTag :type="item.success ? 'success' : 'error'" size="small">
+                  {{ item.success ? '成功' : '失敗' }}
+                </NTag>
+                <span class="item-message">{{ item.message }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!csvTaskRunning" class="file-input-wrap">
+          <input
+            id="csvFile"
+            type="file"
+            accept=".csv"
+            class="file-input"
+            @change="handleFileChange"
+          />
+          <label for="csvFile" class="file-label">
+            <span v-if="csvFile">{{ csvFile.name }}</span>
+            <span v-else>選擇 CSV 檔案</span>
+          </label>
+        </div>
+
+        <NButton
+          v-if="!csvTaskRunning"
+          type="success"
+          block
+          :loading="csvUploading"
+          :disabled="!csvFile"
+          style="margin-top: 16px;"
+          @click="handleCsvUpload"
+        >
+          上傳並建立員工
+        </NButton>
+      </NCard>
 
       <!-- 會員列表 -->
-      <section class="section-card">
-        <div class="section-header">
-          <div class="section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-          </div>
-          <div>
-            <h2>會員列表</h2>
-            <p>共 {{ userTotal }} 位會員</p>
-          </div>
-        </div>
-
-        <div v-if="userLoading" class="table-loading">
-          <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-          </svg>
-          載入中...
-        </div>
-        <template v-else>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>帳號</th>
-                  <th>Email</th>
-                  <th>角色</th>
-                  <th>信箱驗證</th>
-                  <th>建立時間</th>
-                  <th>ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="user in users" :key="user.id">
-                  <td class="cell-bold">{{ user.uid }}</td>
-                  <td>{{ user.email }}</td>
-                  <td>
-                    <span class="role-badge" :class="user.role.toLowerCase()">
-                      {{ roleLabels[user.role] || user.role }}
-                    </span>
-                  </td>
-                  <td>
-                    <span :class="['verify-badge', user.email_verified ? 'verified' : 'unverified']">
-                      {{ user.email_verified ? '已驗證' : '未驗證' }}
-                    </span>
-                  </td>
-                  <td class="cell-muted">{{ user.created_at?.slice(0, 10) || '-' }}</td>
-                  <td class="cell-mono">{{ user.id.slice(0, 8) }}...</td>
-                </tr>
-                <tr v-if="users.length === 0">
-                  <td colspan="6" class="cell-empty">暫無資料</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="userTotalPages > 1" class="pagination">
-            <button :disabled="userPage <= 1" @click="fetchUsers(userPage - 1)">上一頁</button>
-            <span>第 {{ userPage }} / {{ userTotalPages }} 頁</span>
-            <button :disabled="userPage >= userTotalPages" @click="fetchUsers(userPage + 1)">下一頁</button>
-          </div>
+      <NCard title="會員列表" style="margin-bottom: 24px;">
+        <template #header-extra>
+          <span style="font-size: 14px; color: #64748b;">共 {{ userTotal }} 位會員</span>
         </template>
-      </section>
+
+        <NSpin :show="userLoading">
+          <NDataTable
+            :columns="userColumns"
+            :data="users"
+            :bordered="false"
+            :single-line="false"
+            size="small"
+          />
+        </NSpin>
+
+        <div v-if="userTotal > userPageSize" class="pagination-wrapper">
+          <NPagination
+            :page="userPage"
+            :page-size="userPageSize"
+            :item-count="userTotal"
+            @update:page="fetchUsers"
+          />
+        </div>
+      </NCard>
 
       <!-- 員工列表 -->
-      <section class="section-card">
-        <div class="section-header">
-          <div class="section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
-            </svg>
-          </div>
-          <div>
-            <h2>員工列表</h2>
-            <p>共 {{ employeeTotal }} 位員工</p>
-          </div>
-        </div>
-
-        <div v-if="employeeLoading" class="table-loading">
-          <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-          </svg>
-          載入中...
-        </div>
-        <template v-else>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>員工編號</th>
-                  <th>部門</th>
-                  <th>角色</th>
-                  <th>權限等級</th>
-                  <th>建立時間</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="emp in employees" :key="emp.id">
-                  <td class="cell-bold">{{ emp.idno }}</td>
-                  <td>
-                    <span class="dept-badge">{{ departmentLabels[emp.department] || emp.department }}</span>
-                  </td>
-                  <td>{{ emp.role?.name || '-' }}</td>
-                  <td>Lv.{{ emp.role?.level ?? '-' }}</td>
-                  <td class="cell-muted">{{ emp.created_at?.slice(0, 10) || '-' }}</td>
-                </tr>
-                <tr v-if="employees.length === 0">
-                  <td colspan="5" class="cell-empty">暫無資料</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="employeeTotalPages > 1" class="pagination">
-            <button :disabled="employeePage <= 1" @click="fetchEmployees(employeePage - 1)">上一頁</button>
-            <span>第 {{ employeePage }} / {{ employeeTotalPages }} 頁</span>
-            <button :disabled="employeePage >= employeeTotalPages" @click="fetchEmployees(employeePage + 1)">下一頁</button>
-          </div>
+      <NCard title="員工列表">
+        <template #header-extra>
+          <span style="font-size: 14px; color: #64748b;">共 {{ employeeTotal }} 位員工</span>
         </template>
-      </section>
+
+        <NSpin :show="employeeLoading">
+          <NDataTable
+            :columns="employeeColumns"
+            :data="employees"
+            :bordered="false"
+            :single-line="false"
+            size="small"
+          />
+        </NSpin>
+
+        <div v-if="employeeTotal > employeePageSize" class="pagination-wrapper">
+          <NPagination
+            :page="employeePage"
+            :page-size="employeePageSize"
+            :item-count="employeeTotal"
+            @update:page="fetchEmployees"
+          />
+        </div>
+      </NCard>
     </main>
   </div>
 </template>
@@ -632,67 +508,9 @@ const handleCsvUpload = async () => {
   font-weight: 600;
 }
 
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.nav-link:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  background: #eef2ff;
-}
-
-.nav-link svg {
-  width: 18px;
-  height: 18px;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.logout-btn:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
-}
-
-.logout-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
 /* 主要內容 */
 .admin-content {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -714,224 +532,23 @@ const handleCsvUpload = async () => {
   margin: 0;
 }
 
-/* 區塊卡片 */
-.section-card {
-  background: white;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  padding: 32px;
-  margin-bottom: 24px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.section-icon {
-  width: 48px;
-  height: 48px;
-  background: #eef2ff;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.section-icon svg {
-  width: 24px;
-  height: 24px;
-  color: #6366f1;
-}
-
-.section-icon.muted {
-  background: #f1f5f9;
-}
-
-.section-icon.muted svg {
-  color: #94a3b8;
-}
-
-.section-icon.csv-icon {
-  background: #ecfdf5;
-}
-
-.section-icon.csv-icon svg {
-  color: #10b981;
-}
-
-.section-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0f172a;
-  margin: 0 0 4px;
-}
-
-.section-header p {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
 /* 表單 */
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-.error-alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  color: #dc2626;
-  font-size: 14px;
-}
-
-.error-alert svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.success-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  color: #16a34a;
-  font-size: 14px;
-}
-
-.success-alert svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.success-detail {
-  margin-top: 4px;
-  font-size: 13px;
-  color: #15803d;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.input-group {
+.form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.input-group label {
+.form-group label {
   font-size: 14px;
   font-weight: 500;
   color: #374151;
-}
-
-.input-field {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.field-icon {
-  position: absolute;
-  left: 14px;
-  width: 20px;
-  height: 20px;
-  color: #94a3b8;
-  pointer-events: none;
-}
-
-.input-field input,
-.input-field select {
-  width: 100%;
-  padding: 14px 14px 14px 46px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 15px;
-  background: white;
-  color: #1e293b;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.input-field input:focus,
-.input-field select:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.input-field input::placeholder {
-  color: #94a3b8;
-}
-
-.submit-btn {
-  padding: 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 4px;
-}
-
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.4);
-}
-
-.submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.btn-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.spin {
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* CSV 上傳 */
@@ -944,19 +561,10 @@ const handleCsvUpload = async () => {
 }
 
 .hint-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 14px;
   font-weight: 600;
   color: #475569;
   margin-bottom: 12px;
-}
-
-.hint-title svg {
-  width: 18px;
-  height: 18px;
-  color: #6366f1;
 }
 
 .hint-code {
@@ -975,12 +583,6 @@ const handleCsvUpload = async () => {
   margin-top: 10px;
   font-size: 13px;
   color: #64748b;
-}
-
-.upload-area {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .file-input-wrap {
@@ -1015,38 +617,7 @@ const handleCsvUpload = async () => {
   color: #10b981;
 }
 
-.file-label svg {
-  width: 24px;
-  height: 24px;
-}
-
-.file-input:focus + .file-label {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-.upload-btn {
-  padding: 16px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.upload-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.4);
-}
-
-.upload-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* CSV 結果 */
 .upload-result {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -1083,17 +654,9 @@ const handleCsvUpload = async () => {
   margin-top: 4px;
 }
 
-.result-stat.total .stat-value {
-  color: #6366f1;
-}
-
-.result-stat.success .stat-value {
-  color: #10b981;
-}
-
-.result-stat.failure .stat-value {
-  color: #ef4444;
-}
+.result-stat.total .stat-value { color: #6366f1; }
+.result-stat.success .stat-value { color: #10b981; }
+.result-stat.failure .stat-value { color: #ef4444; }
 
 .result-details {
   max-height: 240px;
@@ -1117,14 +680,6 @@ const handleCsvUpload = async () => {
   background: #f1f5f9;
 }
 
-.result-item.success .item-status svg {
-  color: #10b981;
-}
-
-.result-item.failure .item-status svg {
-  color: #ef4444;
-}
-
 .item-row {
   color: #94a3b8;
   min-width: 60px;
@@ -1136,171 +691,66 @@ const handleCsvUpload = async () => {
   min-width: 80px;
 }
 
-.item-status svg {
-  width: 16px;
-  height: 16px;
-}
-
 .item-message {
   flex: 1;
   color: #64748b;
 }
 
-/* 表格 */
-.table-wrap {
-  overflow-x: auto;
-}
-
-.table-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 40px 0;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.table-loading svg {
-  width: 20px;
-  height: 20px;
-  color: #6366f1;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-weight: 600;
-  color: #64748b;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: 14px 16px;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-  white-space: nowrap;
-}
-
-.data-table tbody tr:hover {
+/* 任務進度 */
+.task-progress {
   background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
 }
 
-.cell-bold {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.cell-muted {
-  color: #94a3b8;
-  font-size: 13px;
-}
-
-.cell-mono {
-  font-family: monospace;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.cell-empty {
-  text-align: center;
-  color: #94a3b8;
-  padding: 32px 16px !important;
-}
-
-.role-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.role-badge.admin {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.role-badge.employee {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.role-badge.normal {
-  background: #e0e7ff;
-  color: #4338ca;
-}
-
-.verify-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.verify-badge.verified {
-  background: #f0fdf4;
-  color: #16a34a;
-}
-
-.verify-badge.unverified {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.dept-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  background: #f0f9ff;
-  color: #0369a1;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 分頁 */
-.pagination {
+.task-progress-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 20px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.task-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-id {
+  font-family: monospace;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.task-progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-progress-text {
   font-size: 14px;
   color: #64748b;
 }
 
-.pagination button {
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+.task-progress-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 13px;
-  font-weight: 500;
+  color: #64748b;
+}
+
+.task-current-item {
+  font-weight: 600;
   color: #475569;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.pagination button:hover:not(:disabled) {
-  border-color: #6366f1;
-  color: #6366f1;
-  background: #eef2ff;
-}
-
-.pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 0;
 }
 
 /* RWD */
@@ -1309,25 +759,12 @@ const handleCsvUpload = async () => {
     padding: 12px 16px;
   }
 
-  .nav-actions {
-    gap: 8px;
-  }
-
-  .nav-link span,
-  .logout-btn span {
-    display: none;
-  }
-
   .admin-content {
     padding: 32px 16px;
   }
 
   .page-header h1 {
     font-size: 24px;
-  }
-
-  .section-card {
-    padding: 24px;
   }
 
   .form-grid {

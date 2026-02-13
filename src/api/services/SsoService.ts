@@ -7,9 +7,11 @@ import type { CreateSSOProviderRequest } from '../models/CreateSSOProviderReques
 import type { SSOActionResponse } from '../models/SSOActionResponse';
 import type { SSOAdminProviderListResponse } from '../models/SSOAdminProviderListResponse';
 import type { SSOConfigResponse } from '../models/SSOConfigResponse';
+import type { SSOExchangeCodeRequest } from '../models/SSOExchangeCodeRequest';
 import type { SSOLoginResponse } from '../models/SSOLoginResponse';
 import type { SSOProviderListResponse } from '../models/SSOProviderListResponse';
 import type { SSOProviderResponse } from '../models/SSOProviderResponse';
+import type { SSOTokenResponse } from '../models/SSOTokenResponse';
 import type { UpdateSSOConfigRequest } from '../models/UpdateSSOConfigRequest';
 import type { UpdateSSOProviderRequest } from '../models/UpdateSSOProviderRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -51,9 +53,9 @@ export class SsoService {
     }
     /**
      * Oidc Callback
-     * OIDC callback endpoint. Processes the authorization code.
+     * OIDC callback endpoint. Redirects to frontend with a short-lived authorization code.
      * @param slug
-     * @param code Authorization code
+     * @param code Authorization code from IdP
      * @param state State for CSRF protection
      * @returns any Successful Response
      * @throws ApiError
@@ -80,7 +82,7 @@ export class SsoService {
     }
     /**
      * Saml Acs
-     * SAML Assertion Consumer Service endpoint.
+     * SAML ACS endpoint. Redirects to frontend with a short-lived authorization code.
      * @param slug
      * @param formData
      * @returns any Successful Response
@@ -98,6 +100,26 @@ export class SsoService {
             },
             formData: formData,
             mediaType: 'application/x-www-form-urlencoded',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Exchange Code
+     * Exchange a short-lived authorization code for an access token.
+     * @param requestBody
+     * @returns SSOTokenResponse Successful Response
+     * @throws ApiError
+     */
+    public static ssoExchangeCode(
+        requestBody: SSOExchangeCodeRequest,
+    ): CancelablePromise<SSOTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/sso/token',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
