@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ScheduleService, ApiError } from '@/api'
 import type { GoogleCalendarListItem } from '@/api'
+import { NCard, NSpin, NAlert, NButton, NTag, NEmpty } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,15 +58,11 @@ const selectCalendar = async (calendarId: string) => {
     isSelecting.value = false
   }
 }
-
-const goBack = () => {
-  router.push('/schedules')
-}
 </script>
 
 <template>
   <div class="calendar-select-page">
-    <div class="container">
+    <NCard style="max-width: 500px; width: 100%;">
       <div class="header">
         <div class="google-icon">
           <svg viewBox="0 0 24 24" fill="none">
@@ -79,25 +76,27 @@ const goBack = () => {
         <p>請選擇要同步排程的日曆</p>
       </div>
 
-      <div v-if="isLoading" class="loading">
-        <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        </svg>
-        <span>載入日曆列表中...</span>
+      <!-- 載入中 -->
+      <div v-if="isLoading" class="center-state">
+        <NSpin size="large" />
       </div>
 
-      <div v-else-if="error && calendars.length === 0" class="error-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <p>{{ error }}</p>
-        <button @click="goBack" class="back-btn">返回排程管理</button>
-      </div>
+      <!-- 錯誤且無日曆 -->
+      <template v-else-if="error && calendars.length === 0">
+        <NAlert type="error" :bordered="false" style="margin-bottom: 16px;">{{ error }}</NAlert>
+        <NButton block @click="router.push('/schedules')">返回排程管理</NButton>
+      </template>
 
+      <!-- 無日曆 -->
+      <template v-else-if="calendars.length === 0">
+        <NEmpty description="沒有可用的日曆" />
+      </template>
+
+      <!-- 日曆列表 -->
       <template v-else>
-        <p v-if="error" class="error-msg">{{ error }}</p>
+        <NAlert v-if="error" type="error" :bordered="false" style="margin-bottom: 16px;">
+          {{ error }}
+        </NAlert>
 
         <div class="calendar-list">
           <div
@@ -110,44 +109,28 @@ const goBack = () => {
             <div class="calendar-info">
               <div class="calendar-name">
                 {{ calendar.summary }}
-                <span v-if="calendar.primary" class="primary-badge">主要日曆</span>
+                <NTag v-if="calendar.primary" size="tiny" type="success" :bordered="false">主要日曆</NTag>
               </div>
               <div v-if="calendar.description" class="calendar-desc">{{ calendar.description }}</div>
             </div>
-            <div class="calendar-action">
-              <svg v-if="isSelecting && selectedId === calendar.id" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </div>
+            <NSpin v-if="isSelecting && selectedId === calendar.id" size="small" />
           </div>
         </div>
 
-        <button @click="goBack" class="cancel-btn">取消</button>
+        <NButton block @click="router.push('/schedules')">取消</NButton>
       </template>
-    </div>
+    </NCard>
   </div>
 </template>
 
 <style scoped>
 .calendar-select-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-}
-
-.container {
-  width: 100%;
-  max-width: 500px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  padding: 24px;
+  background: #f8fafc;
 }
 
 .header {
@@ -179,57 +162,10 @@ const goBack = () => {
   margin: 0;
 }
 
-.loading {
+.center-state {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  justify-content: center;
   padding: 40px 0;
-  color: #64748b;
-}
-
-.loading svg {
-  width: 32px;
-  height: 32px;
-  color: #10b981;
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 40px 0;
-  text-align: center;
-}
-
-.error-state svg {
-  width: 48px;
-  height: 48px;
-  color: #dc2626;
-}
-
-.error-state p {
-  color: #64748b;
-  margin: 0;
-}
-
-.error-msg {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
 }
 
 .calendar-list {
@@ -245,7 +181,7 @@ const goBack = () => {
   justify-content: space-between;
   padding: 16px;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -279,15 +215,6 @@ const goBack = () => {
   gap: 8px;
 }
 
-.primary-badge {
-  font-size: 11px;
-  font-weight: 500;
-  background: #10b981;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
 .calendar-desc {
   font-size: 13px;
   color: #64748b;
@@ -295,49 +222,5 @@ const goBack = () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.calendar-action svg {
-  width: 20px;
-  height: 20px;
-  color: #94a3b8;
-}
-
-.calendar-item:hover .calendar-action svg {
-  color: #10b981;
-}
-
-.back-btn {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.cancel-btn {
-  width: 100%;
-  padding: 14px;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cancel-btn:hover {
-  background: #e2e8f0;
 }
 </style>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { NButton, NSpace } from 'naive-ui'
+
+const router = useRouter()
 </script>
 
 <template>
@@ -17,24 +20,14 @@ import { RouterLink } from 'vue-router'
         <p>一個簡潔優雅的 Vue 3 示範專案</p>
       </div>
 
-      <div class="action-buttons">
-        <RouterLink to="/login" class="btn btn-primary">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M15 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+      <NSpace justify="center" :size="16" style="margin-bottom: 64px;">
+        <NButton type="primary" size="large" @click="router.push('/login')">
           會員登入
-        </RouterLink>
-        <RouterLink to="/register" class="btn btn-secondary">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M16 21V19C16 16.79 14.21 15 12 15H5C2.79 15 1 16.79 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-            <path d="M20 8V14M17 11H23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        </NButton>
+        <NButton size="large" ghost text-color="#ffffff" @click="router.push('/register')">
           立即註冊
-        </RouterLink>
-      </div>
+        </NButton>
+      </NSpace>
 
       <div class="features">
         <div class="feature-card">
@@ -121,55 +114,6 @@ import { RouterLink } from 'vue-router'
   margin: 0;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin-bottom: 64px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 32px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-3px);
-}
-
 .features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -223,17 +167,6 @@ import { RouterLink } from 'vue-router'
 @media (max-width: 600px) {
   .hero-section h1 {
     font-size: 32px;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .btn {
-    width: 100%;
-    max-width: 280px;
-    justify-content: center;
   }
 }
 </style>

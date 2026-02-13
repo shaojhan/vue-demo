@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { NInput, NButton, NAlert, NDatePicker, NGrid, NGi } from 'naive-ui'
+import { useFormSubmit } from '@/composables/useFormSubmit'
+import { validatePassword } from '@/composables/usePasswordValidation'
 
 const router = useRouter()
 
@@ -9,65 +12,43 @@ const password = ref('')
 const confirmPassword = ref('')
 const email = ref('')
 const name = ref('')
-const birthdate = ref('')
+const birthdate = ref<number | null>(null)
 const description = ref('')
-const isLoading = ref(false)
-const errorMessage = ref('')
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
 
-const handleRegister = async () => {
-  if (!uid.value || !password.value || !confirmPassword.value || !email.value || !name.value || !birthdate.value) {
-    errorMessage.value = '請填寫所有必填欄位'
-    return
-  }
-
-  if (password.value !== confirmPassword.value) {
-    errorMessage.value = '兩次輸入的密碼不一致'
-    return
-  }
-
-  if (password.value.length < 6) {
-    errorMessage.value = '密碼長度至少需要 6 個字元'
-    return
-  }
-
-  isLoading.value = true
-  errorMessage.value = ''
-
-  try {
-    const response = await fetch('/api/users/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        uid: uid.value,
-        pwd: password.value,
-        email: email.value,
-        name: name.value,
-        birthdate: birthdate.value,
-        description: description.value || '',
-        role: 'NORMAL'
-      })
+const { loading: isLoading, error: errorMessage, submit } = useFormSubmit(async () => {
+  const birthdateStr = new Date(birthdate.value!).toISOString().split('T')[0]
+  const response = await fetch('/api/users/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uid: uid.value,
+      pwd: password.value,
+      email: email.value,
+      name: name.value,
+      birthdate: birthdateStr,
+      description: description.value || '',
+      role: 'NORMAL'
     })
+  })
 
-    if (response.status === 200) {
-      alert('註冊成功！')
-      router.push('/login')
-    } else if (response.status === 409) {
-      errorMessage.value = '此帳號已被註冊，請換一個'
-    } else if (response.status === 422) {
-      errorMessage.value = '輸入格式有誤，請檢查各欄位'
-    } else {
-      errorMessage.value = '註冊失敗，請稍後再試'
-    }
-  } catch (error) {
-    errorMessage.value = '網路連線錯誤，請檢查網路狀態'
-  } finally {
-    isLoading.value = false
+  if (response.status === 200) {
+    alert('註冊成功！')
+    router.push('/login')
+  } else if (response.status === 409) {
+    errorMessage.value = '此帳號已被註冊，請換一個'
+  } else if (response.status === 422) {
+    errorMessage.value = '輸入格式有誤，請檢查各欄位'
+  } else {
+    errorMessage.value = '註冊失敗，請稍後再試'
   }
-}
+})
+
+const handleRegister = () => submit(() => {
+  if (!uid.value || !password.value || !confirmPassword.value || !email.value || !name.value || !birthdate.value) {
+    return '請填寫所有必填欄位'
+  }
+  return validatePassword(password.value, confirmPassword.value)
+})
 </script>
 
 <template>
@@ -138,164 +119,82 @@ const handleRegister = async () => {
         </div>
 
         <form @submit.prevent="handleRegister" class="register-form">
-          <Transition name="fade">
-            <div v-if="errorMessage" class="error-alert">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 8v4M12 16h.01"/>
-              </svg>
-              <span>{{ errorMessage }}</span>
-            </div>
-          </Transition>
+          <NAlert v-if="errorMessage" type="error" :bordered="false">
+            {{ errorMessage }}
+          </NAlert>
 
-          <div class="form-row">
-            <div class="input-group">
-              <label for="uid">帳號</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <input
-                  id="uid"
-                  v-model="uid"
-                  type="text"
-                  placeholder="請輸入帳號"
-                  autocomplete="username"
-                />
+          <NGrid :cols="2" :x-gap="16" responsive="screen" item-responsive>
+            <NGi span="2 m:1">
+              <div class="form-item">
+                <label>帳號</label>
+                <NInput v-model:value="uid" placeholder="請輸入帳號" size="large" />
               </div>
-            </div>
-
-            <div class="input-group">
-              <label for="name">姓名</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <input
-                  id="name"
-                  v-model="name"
-                  type="text"
-                  placeholder="請輸入姓名"
-                  autocomplete="name"
-                />
+            </NGi>
+            <NGi span="2 m:1">
+              <div class="form-item">
+                <label>姓名</label>
+                <NInput v-model:value="name" placeholder="請輸入姓名" size="large" />
               </div>
-            </div>
+            </NGi>
+          </NGrid>
+
+          <div class="form-item">
+            <label>電子郵件</label>
+            <NInput v-model:value="email" type="text" placeholder="name@example.com" size="large" />
           </div>
 
-          <div class="input-group">
-            <label for="email">電子郵件</label>
-            <div class="input-field">
-              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <path d="M22 6l-10 7L2 6"/>
-              </svg>
-              <input
-                id="email"
-                v-model="email"
-                type="email"
-                placeholder="name@example.com"
-                autocomplete="email"
-              />
-            </div>
+          <div class="form-item">
+            <label>出生日期</label>
+            <NDatePicker v-model:value="birthdate" type="date" style="width: 100%;" size="large" />
           </div>
 
-          <div class="input-group">
-            <label for="birthdate">出生日期</label>
-            <div class="input-field">
-              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <input
-                id="birthdate"
-                v-model="birthdate"
-                type="date"
-                autocomplete="bday"
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="input-group">
-              <label for="password">密碼</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0110 0v4"/>
-                </svg>
-                <input
-                  id="password"
-                  v-model="password"
-                  :type="showPassword ? 'text' : 'password'"
+          <NGrid :cols="2" :x-gap="16" responsive="screen" item-responsive>
+            <NGi span="2 m:1">
+              <div class="form-item">
+                <label>密碼</label>
+                <NInput
+                  v-model:value="password"
+                  type="password"
+                  show-password-on="click"
                   placeholder="至少 6 位"
-                  autocomplete="new-password"
+                  size="large"
                 />
-                <button type="button" class="toggle-btn" @click="showPassword = !showPassword">
-                  <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                </button>
               </div>
-            </div>
-
-            <div class="input-group">
-              <label for="confirmPassword">確認密碼</label>
-              <div class="input-field">
-                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0110 0v4"/>
-                </svg>
-                <input
-                  id="confirmPassword"
-                  v-model="confirmPassword"
-                  :type="showConfirmPassword ? 'text' : 'password'"
+            </NGi>
+            <NGi span="2 m:1">
+              <div class="form-item">
+                <label>確認密碼</label>
+                <NInput
+                  v-model:value="confirmPassword"
+                  type="password"
+                  show-password-on="click"
                   placeholder="再次輸入密碼"
-                  autocomplete="new-password"
+                  size="large"
                 />
-                <button type="button" class="toggle-btn" @click="showConfirmPassword = !showConfirmPassword">
-                  <svg v-if="!showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                </button>
               </div>
-            </div>
+            </NGi>
+          </NGrid>
+
+          <div class="form-item">
+            <label>自我介紹 <span class="optional">（選填）</span></label>
+            <NInput
+              v-model:value="description"
+              type="textarea"
+              placeholder="簡單介紹一下自己..."
+              :rows="3"
+              size="large"
+            />
           </div>
 
-          <div class="input-group">
-            <label for="description">自我介紹 <span class="optional">（選填）</span></label>
-            <div class="input-field textarea-field">
-              <textarea
-                id="description"
-                v-model="description"
-                placeholder="簡單介紹一下自己..."
-                rows="3"
-              ></textarea>
-            </div>
-          </div>
-
-          <button type="submit" class="submit-btn" :disabled="isLoading">
-            <span v-if="isLoading" class="btn-loading">
-              <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              註冊中...
-            </span>
-            <span v-else>建立帳戶</span>
-          </button>
+          <NButton
+            type="primary"
+            size="large"
+            block
+            :loading="isLoading"
+            attr-type="submit"
+          >
+            建立帳戶
+          </NButton>
         </form>
 
         <div class="register-footer">
@@ -322,22 +221,6 @@ const handleRegister = async () => {
   padding: 48px;
   position: relative;
   overflow: hidden;
-}
-
-.brand-section::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-  animation: pulse 15s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-10%, -10%) scale(1.1); }
 }
 
 .brand-content {
@@ -476,13 +359,16 @@ const handleRegister = async () => {
   gap: 18px;
 }
 
-.form-row {
+.form-item {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.form-row .input-group {
-  flex: 1;
+.form-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
 }
 
 .optional {
@@ -491,177 +377,6 @@ const handleRegister = async () => {
   font-size: 13px;
 }
 
-.textarea-field textarea {
-  width: 100%;
-  padding: 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 15px;
-  background: white;
-  color: #1e293b;
-  transition: all 0.2s;
-  box-sizing: border-box;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.textarea-field textarea:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.textarea-field textarea::placeholder {
-  color: #94a3b8;
-}
-
-/* 錯誤提示 */
-.error-alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  color: #dc2626;
-  font-size: 14px;
-}
-
-.error-alert svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-/* 輸入框 */
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.input-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.input-field {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.field-icon {
-  position: absolute;
-  left: 14px;
-  width: 20px;
-  height: 20px;
-  color: #94a3b8;
-  pointer-events: none;
-}
-
-.input-field input {
-  width: 100%;
-  padding: 14px 14px 14px 46px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 15px;
-  background: white;
-  color: #1e293b;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.input-field input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.input-field input::placeholder {
-  color: #94a3b8;
-}
-
-.toggle-btn {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: #94a3b8;
-  display: flex;
-  transition: color 0.2s;
-}
-
-.toggle-btn:hover {
-  color: #6366f1;
-}
-
-.toggle-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* 註冊按鈕 */
-.submit-btn {
-  padding: 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 4px;
-}
-
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.4);
-}
-
-.submit-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.btn-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.spin {
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 底部 */
 .register-footer {
   margin-top: 32px;
   text-align: center;
@@ -683,7 +398,6 @@ const handleRegister = async () => {
   text-decoration: underline;
 }
 
-/* RWD */
 @media (max-width: 1024px) {
   .brand-section {
     display: none;
@@ -697,19 +411,6 @@ const handleRegister = async () => {
 @media (max-width: 480px) {
   .register-header h2 {
     font-size: 26px;
-  }
-
-  .input-field input {
-    padding: 12px 12px 12px 42px;
-  }
-
-  .submit-btn {
-    padding: 14px;
-  }
-
-  .form-row {
-    flex-direction: column;
-    gap: 18px;
   }
 }
 </style>
