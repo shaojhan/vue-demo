@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ScheduleService, ApiError } from '@/api'
+import { ScheduleService, ChatService, ApiError } from '@/api'
 import { isAllowedRedirectUrl } from '@/utils/urlValidation'
-import type { ScheduleListItem, ScheduleResponse, GoogleStatusResponse } from '@/api'
+import type { ScheduleListItem, ScheduleResponse, GoogleStatusResponse, MessageItem, ActionTakenItem } from '@/api'
 import {
   NButton, NCard, NSpin, NEmpty, NAlert, NInput, NModal,
   NPagination, NSpace, NTag, NCheckbox, NDatePicker, NDescriptions,
@@ -69,7 +69,8 @@ const { loading: formSaving, error: formError, submit: submitForm } = useFormSub
     location: formLocation.value.trim() || null,
     start_time: new Date(formStartTime.value!).toISOString(),
     end_time: new Date(formEndTime.value!).toISOString(),
-    all_day: formAllDay.value
+    all_day: formAllDay.value,
+    sync_to_google: !!googleStatus.value?.connected
   }
 
   if (isEditing.value && editingId.value) {
@@ -213,6 +214,79 @@ const connectGoogle = async () => {
   } catch {
     googleConnecting.value = false
   }
+}
+
+// === 聊天視窗 ===
+const chatOpen = ref(false)
+const chatMessages = ref<MessageItem[]>([])
+const chatInput = ref('')
+const chatSending = ref(false)
+const chatConversationId = ref<string | null>(null)
+const chatLastActions = ref<ActionTakenItem[]>([])
+const chatMessagesContainer = ref<HTMLElement | null>(null)
+
+const scrollChatToBottom = async () => {
+  await nextTick()
+  if (chatMessagesContainer.value) {
+    chatMessagesContainer.value.scrollTop = chatMessagesContainer.value.scrollHeight
+  }
+}
+
+const startNewChat = () => {
+  chatConversationId.value = null
+  chatMessages.value = []
+  chatLastActions.value = []
+  chatInput.value = ''
+}
+
+const handleChatSend = async () => {
+  const msg = chatInput.value.trim()
+  if (!msg || chatSending.value) return
+
+  chatMessages.value.push({ role: 'user', content: msg, created_at: new Date().toISOString() })
+  chatInput.value = ''
+  chatLastActions.value = []
+  scrollChatToBottom()
+
+  chatSending.value = true
+  try {
+    const res = await ChatService.sendMessageChatPost({
+      message: msg,
+      conversation_id: chatConversationId.value
+    })
+
+    if (!chatConversationId.value) {
+      chatConversationId.value = res.conversation_id
+    }
+
+    chatMessages.value.push({ role: 'assistant', content: res.message, created_at: new Date().toISOString() })
+    chatLastActions.value = res.actions_taken || []
+    scrollChatToBottom()
+
+    // AI 可能修改了排程，重新整理列表
+    if (chatLastActions.value.length > 0) {
+      fetchSchedules(page.value)
+    }
+  } catch {
+    chatMessages.value.push({ role: 'assistant', content: '抱歉，發生錯誤，請稍後再試。', created_at: new Date().toISOString() })
+    scrollChatToBottom()
+  } finally {
+    chatSending.value = false
+  }
+}
+
+const handleChatKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    handleChatSend()
+  }
+}
+
+const chatToolLabels: Record<string, string> = {
+  create_schedule: '建立排程',
+  update_schedule: '更新排程',
+  delete_schedule: '刪除排程',
+  list_schedules: '查詢排程'
 }
 
 onMounted(() => {
@@ -379,6 +453,95 @@ onMounted(() => {
         </div>
       </NCard>
     </main>
+
+    <!-- 聊天浮動按鈕 -->
+    <button v-if="!chatOpen" class="chat-fab" @click="chatOpen = true">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 3C7.925 3 3 7.149 3 12.25c0 2.876 1.57 5.444 4.025 7.118L5.5 24l5.053-2.27C11.635 21.91 12.798 22 14 22c6.075 0 11-4.149 11-9.25S20.075 3 14 3Z" fill="white"/>
+        <circle cx="10" cy="12.5" r="1.25" fill="#6366f1"/>
+        <circle cx="14" cy="12.5" r="1.25" fill="#6366f1"/>
+        <circle cx="18" cy="12.5" r="1.25" fill="#6366f1"/>
+      </svg>
+    </button>
+
+    <!-- 聊天視窗 -->
+    <div v-if="chatOpen" class="chat-widget">
+      <!-- 標題列 -->
+      <div class="chat-widget-header">
+        <div class="chat-widget-title">
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="22" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)"/>
+            <path d="M16 22a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm12 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z" fill="white"/>
+            <path d="M16 30c0 0 2 4 8 4s8-4 8-4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>AI 排程助理</span>
+        </div>
+        <NSpace :size="4">
+          <NButton text size="tiny" style="color: white;" @click="startNewChat">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414L1 14.414V2a1 1 0 0 1 1-1h12ZM2 0a2 2 0 0 0-2 2v13.793l4.207-4.207A1 1 0 0 1 4.914 11H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2Z"/>
+              <path d="M7.5 3.5a.5.5 0 0 1 1 0V5H10a.5.5 0 0 1 0 1H8.5v1.5a.5.5 0 0 1-1 0V6H6a.5.5 0 0 1 0-1h1.5V3.5Z"/>
+            </svg>
+          </NButton>
+          <NButton text size="tiny" style="color: white;" @click="chatOpen = false">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708Z"/>
+            </svg>
+          </NButton>
+        </NSpace>
+      </div>
+
+      <!-- 訊息區域 -->
+      <div ref="chatMessagesContainer" class="chat-widget-messages">
+        <div v-if="chatMessages.length === 0" class="chat-welcome">
+          <p>你好！我是 AI 排程助理，可以幫你管理排程。</p>
+          <div class="chat-examples">
+            <span class="chat-example-chip" @click="chatInput = '幫我明天下午2點安排一個會議'">安排會議</span>
+            <span class="chat-example-chip" @click="chatInput = '查看我這週的排程'">查看排程</span>
+            <span class="chat-example-chip" @click="chatInput = '取消明天的會議'">取消會議</span>
+          </div>
+        </div>
+
+        <div v-for="(msg, idx) in chatMessages" :key="idx" class="chat-msg" :class="msg.role">
+          <div class="chat-msg-bubble">
+            <div class="chat-msg-text">{{ msg.content }}</div>
+            <div v-if="msg.role === 'assistant' && idx === chatMessages.length - 1 && chatLastActions.length > 0" class="chat-actions">
+              <div v-for="(action, aIdx) in chatLastActions" :key="aIdx" class="chat-action-item">
+                <NTag :type="action.success ? 'success' : 'error'" size="tiny">
+                  {{ chatToolLabels[action.tool] || action.tool }}
+                </NTag>
+                <span v-if="action.success" class="chat-action-ok">已執行</span>
+                <span v-else class="chat-action-fail">失敗</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="chatSending" class="chat-msg assistant">
+          <div class="chat-msg-bubble">
+            <div class="chat-typing"><span /><span /><span /></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 輸入區域 -->
+      <div class="chat-widget-input">
+        <NInput
+          v-model:value="chatInput"
+          type="textarea"
+          placeholder="輸入訊息..."
+          :rows="1"
+          :autosize="{ minRows: 1, maxRows: 3 }"
+          :disabled="chatSending"
+          @keydown="handleChatKeydown"
+        />
+        <NButton type="primary" size="small" :loading="chatSending" :disabled="!chatInput.trim()" @click="handleChatSend">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
+            <path d="M2.5 2.1a.5.5 0 0 1 .7-.4l12 5.5a.5.5 0 0 1 0 .9l-12 5.5a.5.5 0 0 1-.7-.6L4.2 9 2.5 4.7a.5.5 0 0 1 0-2.6ZM5.3 9.5l-1.4 3.5L13.3 9 3.9 5l1.4 3.5H8a.5.5 0 0 1 0 1H5.3Z"/>
+          </svg>
+        </NButton>
+      </div>
+    </div>
 
     <!-- 新增/編輯 Modal -->
     <NModal
@@ -714,6 +877,231 @@ onMounted(() => {
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* === 聊天浮動按鈕 === */
+.chat-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 1000;
+}
+
+.chat-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
+}
+
+/* === 聊天視窗 === */
+.chat-widget {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 400px;
+  height: 520px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.chat-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  flex-shrink: 0;
+}
+
+.chat-widget-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chat-widget-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.chat-welcome p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 16px;
+}
+
+.chat-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.chat-example-chip {
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chat-example-chip:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #eef2ff;
+}
+
+/* 訊息氣泡 */
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.chat-msg.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-msg.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.chat-msg-bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.chat-msg.user .chat-msg-bubble {
+  background: #6366f1;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg.assistant .chat-msg-bubble {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-msg-text {
+  white-space: pre-wrap;
+}
+
+.chat-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-action-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-action-ok {
+  font-size: 11px;
+  color: #10b981;
+}
+
+.chat-action-fail {
+  font-size: 11px;
+  color: #ef4444;
+}
+
+/* Typing indicator */
+.chat-typing {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.chat-typing span {
+  width: 7px;
+  height: 7px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: chat-typing 1.2s ease-in-out infinite;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chat-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* 輸入區域 */
+.chat-widget-input {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.chat-widget-input :deep(.n-input) {
+  flex: 1;
+}
+
+/* 手機版 */
+@media (max-width: 640px) {
+  .chat-fab {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .chat-widget {
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
   }
 }
 </style>

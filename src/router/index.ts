@@ -87,6 +87,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('@/views/ChatPage.vue'),
+    meta: {
+      title: 'AI 助理',
+      requiresAuth: true,
+      requiresEmployee: true
+    }
+  },
+  {
     path: '/schedules',
     name: 'Schedules',
     component: () => import('@/views/SchedulePage.vue'),
@@ -97,7 +107,7 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/schedules/google/select',
+    path: '/admin/calendar/select',
     name: 'GoogleCalendarSelect',
     component: () => import('@/views/GoogleCalendarSelectPage.vue'),
     meta: {
@@ -112,6 +122,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AdminPage.vue'),
     meta: {
       title: '管理後台',
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
+    path: '/mqtt',
+    name: 'Mqtt',
+    component: () => import('@/views/MqttPage.vue'),
+    meta: {
+      title: 'MQTT 管理',
       requiresAuth: true,
       requiresAdmin: true
     }
