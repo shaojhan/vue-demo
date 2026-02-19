@@ -6,10 +6,14 @@ import { ScheduleService, ChatService, ApiError } from '@/api'
 import { isAllowedRedirectUrl } from '@/utils/urlValidation'
 import type { ScheduleListItem, ScheduleResponse, GoogleStatusResponse, MessageItem, ActionTakenItem } from '@/api'
 import {
-  NButton, NCard, NSpin, NEmpty, NAlert, NInput, NModal,
+  NButton, NCard, NSpin, NAlert, NInput, NModal,
   NPagination, NSpace, NTag, NCheckbox, NDatePicker, NDescriptions,
   NDescriptionsItem, useDialog
 } from 'naive-ui'
+import { AgGridVue } from 'ag-grid-vue3'
+import type { ColDef, RowClickedEvent } from 'ag-grid-community'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useLogout } from '@/composables/useLogout'
@@ -181,10 +185,59 @@ const formatDateTime = (dateStr: string) => {
   })
 }
 
-// 格式化日期
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-TW')
+// AG Grid 欄位定義
+const columnDefs = ref<ColDef<ScheduleListItem>[]>([
+  { headerName: '標題', field: 'title', flex: 2, minWidth: 120 },
+  { headerName: '地點', field: 'location', flex: 1, minWidth: 100 },
+  {
+    headerName: '開始時間',
+    field: 'start_time',
+    flex: 1.5,
+    minWidth: 150,
+    valueFormatter: (params) => params.value ? formatDateTime(params.value) : ''
+  },
+  {
+    headerName: '結束時間',
+    field: 'end_time',
+    flex: 1.5,
+    minWidth: 150,
+    valueFormatter: (params) => params.value ? formatDateTime(params.value) : ''
+  },
+  {
+    headerName: '全天',
+    field: 'all_day',
+    width: 80,
+    valueFormatter: (params) => params.value ? '是' : '否'
+  },
+  {
+    headerName: '建立者',
+    valueGetter: (params) => params.data?.creator?.username || '',
+    flex: 1,
+    minWidth: 80
+  },
+  {
+    headerName: '同步狀態',
+    field: 'is_synced',
+    width: 110,
+    cellRenderer: (params: { value: boolean }) => {
+      const synced = params.value
+      const color = synced ? '#16a34a' : '#94a3b8'
+      const bg = synced ? '#dcfce7' : '#f1f5f9'
+      const text = synced ? '已同步' : '未同步'
+      return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${text}</span>`
+    }
+  }
+])
+
+const defaultColDef: ColDef = {
+  sortable: true,
+  resizable: true
+}
+
+const onRowClicked = (event: RowClickedEvent<ScheduleListItem>) => {
+  if (event.data) {
+    openDetail(event.data.id)
+  }
 }
 
 // 取得 Google Calendar 狀態
@@ -399,48 +452,21 @@ onMounted(() => {
         </NSpace>
       </NCard>
 
-      <NCard>
-        <!-- 排程列表 -->
-        <div v-if="loading" class="center-state">
-          <NSpin size="large" />
-        </div>
+      <!-- 排程表格 -->
+      <div v-if="loading" class="center-state">
+        <NSpin size="large" />
+      </div>
 
-        <div v-else-if="schedules.length === 0" style="padding: 40px 0;">
-          <NEmpty description="尚無排程" />
-        </div>
-
-        <div v-else class="schedule-list">
-          <div
-            v-for="schedule in schedules"
-            :key="schedule.id"
-            class="schedule-item"
-            @click="openDetail(schedule.id)"
-          >
-            <div class="schedule-time">
-              <span class="time-date">{{ formatDate(schedule.start_time) }}</span>
-              <span v-if="!schedule.all_day" class="time-hour">
-                {{ new Date(schedule.start_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }}
-              </span>
-              <NTag v-else size="tiny" type="success" :bordered="false">全天</NTag>
-            </div>
-            <div class="schedule-body">
-              <div class="schedule-title">{{ schedule.title }}</div>
-              <div v-if="schedule.location" class="schedule-location">{{ schedule.location }}</div>
-              <div v-if="schedule.creator" class="schedule-creator">建立者: {{ schedule.creator.username }}</div>
-            </div>
-            <div class="schedule-actions">
-              <NTag v-if="schedule.is_synced" size="small" type="success" :bordered="false">已同步</NTag>
-              <NButton
-                v-if="schedule.creator?.user_id === authStore.user?.id"
-                text
-                size="small"
-                @click.stop="openEditModal(schedule)"
-              >
-                編輯
-              </NButton>
-            </div>
-          </div>
-        </div>
+      <template v-else>
+        <ag-grid-vue
+          class="ag-theme-quartz schedule-grid"
+          :rowData="schedules"
+          :columnDefs="columnDefs"
+          :defaultColDef="defaultColDef"
+          :pagination="false"
+          :domLayout="'autoHeight'"
+          @row-clicked="onRowClicked"
+        />
 
         <!-- 分頁 -->
         <div v-if="total > pageSize" class="pagination-wrapper">
@@ -451,7 +477,7 @@ onMounted(() => {
             @update:page="fetchSchedules"
           />
         </div>
-      </NCard>
+      </template>
     </main>
 
     <!-- 聊天浮動按鈕 -->
@@ -677,7 +703,7 @@ onMounted(() => {
 
 /* 主要內容 */
 .schedule-content {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -745,76 +771,15 @@ onMounted(() => {
   color: #64748b;
 }
 
-/* 排程列表 */
-.schedule-list {
-  max-height: 600px;
-  overflow-y: auto;
+/* AG Grid */
+.schedule-grid {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.schedule-item {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
+.schedule-grid :deep(.ag-row) {
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.schedule-item:hover {
-  background: #f8fafc;
-}
-
-.schedule-item:last-child {
-  border-bottom: none;
-}
-
-.schedule-time {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 80px;
-  gap: 4px;
-}
-
-.time-date {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6366f1;
-}
-
-.time-hour {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.schedule-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.schedule-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
-}
-
-.schedule-location {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.schedule-creator {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.schedule-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .pagination-wrapper {
@@ -864,15 +829,6 @@ onMounted(() => {
 
   .page-header h1 {
     font-size: 24px;
-  }
-
-  .schedule-item {
-    padding: 16px;
-    flex-wrap: wrap;
-  }
-
-  .schedule-time {
-    min-width: 60px;
   }
 
   .form-row {

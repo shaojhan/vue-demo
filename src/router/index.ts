@@ -78,6 +78,15 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/login-records',
+    name: 'LoginRecords',
+    component: () => import('@/views/LoginRecordsPage.vue'),
+    meta: {
+      title: '登入紀錄',
+      requiresAuth: true
+    }
+  },
+  {
     path: '/messages',
     name: 'Messages',
     component: () => import('@/views/MessagesPage.vue'),
@@ -124,6 +133,16 @@ const routes: RouteRecordRaw[] = [
       title: '管理後台',
       requiresAuth: true,
       requiresAdmin: true
+    }
+  },
+  {
+    path: '/approvals',
+    name: 'Approvals',
+    component: () => import('@/views/ApprovalPage.vue'),
+    meta: {
+      title: '簽核管理',
+      requiresAuth: true,
+      requiresEmployee: true
     }
   },
   {

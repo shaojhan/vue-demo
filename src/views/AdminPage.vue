@@ -233,6 +233,7 @@ const csvTaskStatusLabel: Record<string, string> = {
         <span class="nav-badge">管理後台</span>
       </div>
       <NSpace>
+        <NButton @click="router.push('/mqtt')">MQTT 管理</NButton>
         <NButton @click="router.push('/user')">個人頁面</NButton>
         <NButton @click="handleLogout">登出</NButton>
       </NSpace>

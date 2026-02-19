@@ -7,6 +7,10 @@ import {
   NButton, NCard, NSpin, NAlert, NInput, NSelect,
   NPagination, NSpace, NTag
 } from 'naive-ui'
+import { AgGridVue } from 'ag-grid-vue3'
+import type { ColDef } from 'ag-grid-community'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useLogout } from '@/composables/useLogout'
@@ -117,6 +121,37 @@ watch(topicFilter, () => {
 const formatTime = (dateStr: string) => {
   const d = new Date(dateStr)
   return d.toLocaleString('zh-TW')
+}
+
+// AG Grid 欄位定義
+const msgColumnDefs = ref<ColDef<MQTTMessageItem>[]>([
+  { headerName: '主題', field: 'topic', flex: 2, minWidth: 150 },
+  {
+    headerName: '訊息內容',
+    field: 'payload',
+    flex: 3,
+    minWidth: 200,
+    autoHeight: true,
+    wrapText: true,
+    cellStyle: { 'font-family': 'monospace', 'font-size': '13px', 'white-space': 'pre-wrap', 'line-height': '1.5', 'padding-top': '8px', 'padding-bottom': '8px' }
+  },
+  {
+    headerName: 'QoS',
+    field: 'qos',
+    width: 80
+  },
+  {
+    headerName: '接收時間',
+    field: 'received_at',
+    flex: 1.5,
+    minWidth: 160,
+    valueFormatter: (params) => params.value ? formatTime(params.value) : ''
+  }
+])
+
+const msgDefaultColDef: ColDef = {
+  sortable: true,
+  resizable: true
 }
 
 onMounted(() => {
@@ -234,21 +269,19 @@ onMounted(() => {
           <NInput v-model:value="topicFilter" placeholder="依主題篩選..." clearable style="max-width: 300px;" />
         </div>
 
-        <NSpin :show="messageLoading">
-          <div v-if="messages.length > 0" class="message-list">
-            <div v-for="msg in (messages as MQTTMessageItem[])" :key="msg.id" class="message-item">
-              <div class="message-header">
-                <code class="topic-name">{{ msg.topic }}</code>
-                <NSpace :size="8">
-                  <NTag size="tiny" :bordered="false">QoS {{ msg.qos }}</NTag>
-                  <span class="message-time">{{ formatTime(msg.received_at) }}</span>
-                </NSpace>
-              </div>
-              <pre class="message-payload">{{ msg.payload }}</pre>
-            </div>
-          </div>
-          <div v-else class="empty-hint">沒有訊息紀錄</div>
-        </NSpin>
+        <div v-if="messageLoading" class="center-state">
+          <NSpin size="large" />
+        </div>
+        <template v-else>
+          <ag-grid-vue
+            class="ag-theme-quartz message-grid"
+            :rowData="messages as MQTTMessageItem[]"
+            :columnDefs="msgColumnDefs"
+            :defaultColDef="msgDefaultColDef"
+            :pagination="false"
+            :domLayout="'autoHeight'"
+          />
+        </template>
 
         <div v-if="messageTotal > messagePageSize" class="pagination-wrapper">
           <NPagination
@@ -302,7 +335,7 @@ onMounted(() => {
 }
 
 .mqtt-content {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -408,43 +441,16 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.message-list {
+.center-state {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: center;
+  padding: 40px 0;
 }
 
-.message-item {
-  border: 1px solid #e2e8f0;
+.message-grid {
+  width: 100%;
   border-radius: 8px;
   overflow: hidden;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.message-payload {
-  margin: 0;
-  padding: 12px 14px;
-  font-family: monospace;
-  font-size: 13px;
-  color: #334155;
-  white-space: pre-wrap;
-  word-break: break-all;
-  background: white;
-  max-height: 120px;
-  overflow-y: auto;
 }
 
 .pagination-wrapper {

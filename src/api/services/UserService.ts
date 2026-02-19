@@ -6,6 +6,7 @@ import type { Body_login_user } from '../models/Body_login_user';
 import type { Body_upload_avatar } from '../models/Body_upload_avatar';
 import type { CurrentUserResponse } from '../models/CurrentUserResponse';
 import type { ForgotPasswordRequest } from '../models/ForgotPasswordRequest';
+import type { LoginRecordListResponse } from '../models/LoginRecordListResponse';
 import type { LoginResponse } from '../models/LoginResponse';
 import type { ResendVerificationRequest } from '../models/ResendVerificationRequest';
 import type { ResetPasswordRequest } from '../models/ResetPasswordRequest';
@@ -258,6 +259,57 @@ export class UserService {
             url: '/users/avatar',
             formData: formData,
             mediaType: 'multipart/form-data',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get My Login Records
+     * Get current user's login records with pagination.
+     * @param page 頁碼
+     * @param size 每頁筆數
+     * @returns LoginRecordListResponse Successful Response
+     * @throws ApiError
+     */
+    public static getMyLoginRecords(
+        page: number = 1,
+        size: number = 20,
+    ): CancelablePromise<LoginRecordListResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/me/login-records',
+            query: {
+                'page': page,
+                'size': size,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get All Login Records
+     * Get all login records with pagination (Admin only).
+     * @param page 頁碼
+     * @param size 每頁筆數
+     * @param userId 篩選特定使用者 ID
+     * @returns LoginRecordListResponse Successful Response
+     * @throws ApiError
+     */
+    public static getAllLoginRecords(
+        page: number = 1,
+        size: number = 20,
+        userId?: (string | null),
+    ): CancelablePromise<LoginRecordListResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/login-records',
+            query: {
+                'page': page,
+                'size': size,
+                'user_id': userId,
+            },
             errors: {
                 422: `Validation Error`,
             },

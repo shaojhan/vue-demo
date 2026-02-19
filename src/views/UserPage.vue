@@ -210,6 +210,9 @@ const handleAvatarChange = async (event: Event) => {
             >
               管理員後台
             </NButton>
+            <NButton @click="router.push('/login-records')">
+              登入紀錄
+            </NButton>
             <NButton @click="router.push('/change-password')">
               修改密碼
             </NButton>
