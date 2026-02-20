@@ -61,4 +61,57 @@ export class OauthService {
             },
         });
     }
+    /**
+     * Github Login
+     * Redirect to GitHub OAuth2 consent screen.
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static githubLogin(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/auth/github/login',
+        });
+    }
+    /**
+     * Github Callback
+     * Handle GitHub OAuth2 callback. Redirects to frontend with a short-lived authorization code.
+     * @param code Authorization code from GitHub
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static githubCallback(
+        code: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/auth/github/callback',
+            query: {
+                'code': code,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Github Exchange Code
+     * Exchange a short-lived authorization code for an access token.
+     * @param requestBody
+     * @returns OAuthTokenResponse Successful Response
+     * @throws ApiError
+     */
+    public static githubExchangeCode(
+        requestBody: OAuthExchangeCodeRequest,
+    ): CancelablePromise<OAuthTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/auth/github/token',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

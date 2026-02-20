@@ -156,6 +156,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/kafka',
+    name: 'Kafka',
+    component: () => import('@/views/KafkaPage.vue'),
+    meta: {
+      title: 'Kafka 管理',
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFoundPage.vue'),

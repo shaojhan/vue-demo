@@ -19,7 +19,14 @@ onMounted(async () => {
     window.history.replaceState({}, '', route.path)
 
     try {
-      const tokenRes = await OauthService.googleExchangeCode({ code })
+      const provider = (route.query.provider as string) || sessionStorage.getItem('oauth_provider') || 'google'
+      sessionStorage.removeItem('oauth_provider')
+
+      const exchangeFn = provider === 'github'
+        ? OauthService.githubExchangeCode
+        : OauthService.googleExchangeCode
+
+      const tokenRes = await exchangeFn({ code })
       // 先設定 token 以便後續 API 呼叫帶上認證
       OpenAPI.TOKEN = tokenRes.access_token
       const userRes = await UserService.getCurrentUser()
