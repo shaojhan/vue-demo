@@ -6,24 +6,26 @@ import { ScheduleService, ChatService, ApiError } from '@/api'
 import { isAllowedRedirectUrl } from '@/utils/urlValidation'
 import type { ScheduleListItem, ScheduleResponse, GoogleStatusResponse, MessageItem, ActionTakenItem } from '@/api'
 import {
-  NButton, NCard, NSpin, NAlert, NInput, NModal,
-  NPagination, NSpace, NTag, NCheckbox, NDatePicker, NDescriptions,
+  NButton, NCard, NAlert, NInput, NModal,
+  NSpace, NTag, NCheckbox, NDatePicker, NDescriptions,
   NDescriptionsItem, useDialog
 } from 'naive-ui'
-import { AgGridVue } from 'ag-grid-vue3'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
-import { useLogout } from '@/composables/useLogout'
 import { useModal } from '@/composables/useModal'
+import PageLayout from '@/components/PageLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
+import DataGrid from '@/components/DataGrid.vue'
+import FormField from '@/components/FormField.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const dialog = useDialog()
-const { logout: handleLogout } = useLogout()
+
 
 // Google Calendar 狀態
 const googleStatus = ref<GoogleStatusResponse | null>(null)
@@ -229,11 +231,6 @@ const columnDefs = ref<ColDef<ScheduleListItem>[]>([
   }
 ])
 
-const defaultColDef: ColDef = {
-  sortable: true,
-  resizable: true
-}
-
 const onRowClicked = (event: RowClickedEvent<ScheduleListItem>) => {
   if (event.data) {
     openDetail(event.data.id)
@@ -357,128 +354,71 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="schedule-page">
-    <nav class="top-nav">
-      <div class="nav-brand">
-        <svg viewBox="0 0 48 48" fill="none" class="nav-logo">
-          <rect width="48" height="48" rx="12" fill="url(#grad)"/>
-          <path d="M24 14L14 20V32L24 38L34 32V20L24 14Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span>Vue Demo</span>
-        <span class="nav-badge">排程管理</span>
+  <PageLayout badge="排程管理">
+    <!-- Google 連接成功提示 -->
+    <NAlert v-if="showGoogleSuccess" type="success" :bordered="false" closable style="margin-bottom: 24px;">
+      Google Calendar 連接成功！
+    </NAlert>
+
+    <!-- Google Calendar 狀態 (Admin only) -->
+    <NCard v-if="authStore.user?.role === 'ADMIN'" size="small" style="margin-bottom: 24px;">
+      <div class="google-status-row">
+        <div class="google-status-info">
+          <div class="google-icon">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 600;">Google Calendar</div>
+            <div v-if="googleLoading" style="font-size: 13px; color: #64748b;">檢查連接狀態中...</div>
+            <div v-else-if="googleStatus?.connected" style="font-size: 13px; color: #16a34a;">
+              已連接 · {{ googleStatus.calendar_id }}
+            </div>
+            <div v-else style="font-size: 13px; color: #64748b;">尚未連接</div>
+          </div>
+        </div>
+        <NButton
+          v-if="!googleLoading"
+          :loading="googleConnecting"
+          :type="googleStatus?.connected ? 'default' : 'info'"
+          @click="connectGoogle"
+        >
+          {{ googleStatus?.connected ? '重新連接' : '連接 Google' }}
+        </NButton>
       </div>
-      <NSpace>
-        <NButton @click="router.push('/user')">個人頁面</NButton>
-        <NButton @click="handleLogout">登出</NButton>
+    </NCard>
+
+    <PageHeader title="排程管理" description="管理您的工作排程">
+      <NButton type="success" @click="openCreateModal">新增排程</NButton>
+    </PageHeader>
+
+    <!-- 篩選區 -->
+    <NCard size="small" style="margin-bottom: 24px;">
+      <NSpace align="end">
+        <div class="filter-group">
+          <label>開始日期</label>
+          <NDatePicker v-model:value="filterStartFrom" type="date" clearable style="width: 180px;" />
+        </div>
+        <div class="filter-group">
+          <label>結束日期</label>
+          <NDatePicker v-model:value="filterStartTo" type="date" clearable style="width: 180px;" />
+        </div>
+        <NButton type="primary" @click="applyFilter">篩選</NButton>
+        <NButton @click="clearFilter">清除</NButton>
       </NSpace>
-    </nav>
+    </NCard>
 
-    <main class="schedule-content">
-      <!-- Google 連接成功提示 -->
-      <NAlert v-if="showGoogleSuccess" type="success" :bordered="false" closable style="margin-bottom: 24px;">
-        Google Calendar 連接成功！
-      </NAlert>
+    <!-- 排程表格 -->
+    <LoadingState v-if="loading" />
 
-      <!-- Google Calendar 狀態 (Admin only) -->
-      <NCard v-if="authStore.user?.role === 'ADMIN'" size="small" style="margin-bottom: 24px;">
-        <div class="google-status-row">
-          <div class="google-status-info">
-            <div class="google-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-            </div>
-            <div>
-              <div style="font-weight: 600;">Google Calendar</div>
-              <div v-if="googleLoading" style="font-size: 13px; color: #64748b;">檢查連接狀態中...</div>
-              <div v-else-if="googleStatus?.connected" style="font-size: 13px; color: #16a34a;">
-                已連接 · {{ googleStatus.calendar_id }}
-              </div>
-              <div v-else style="font-size: 13px; color: #64748b;">尚未連接</div>
-            </div>
-          </div>
-          <NButton
-            v-if="!googleLoading"
-            :loading="googleConnecting"
-            :type="googleStatus?.connected ? 'default' : 'info'"
-            @click="connectGoogle"
-          >
-            {{ googleStatus?.connected ? '重新連接' : '連接 Google' }}
-          </NButton>
-        </div>
-      </NCard>
-
-      <div class="page-header">
-        <div>
-          <h1>排程管理</h1>
-          <p>管理您的工作排程</p>
-        </div>
-        <NButton type="success" @click="openCreateModal">新增排程</NButton>
-      </div>
-
-      <!-- 篩選區 -->
-      <NCard size="small" style="margin-bottom: 24px;">
-        <NSpace align="end">
-          <div class="filter-group">
-            <label>開始日期</label>
-            <NDatePicker
-              v-model:value="filterStartFrom"
-              type="date"
-              clearable
-              style="width: 180px;"
-            />
-          </div>
-          <div class="filter-group">
-            <label>結束日期</label>
-            <NDatePicker
-              v-model:value="filterStartTo"
-              type="date"
-              clearable
-              style="width: 180px;"
-            />
-          </div>
-          <NButton type="primary" @click="applyFilter">篩選</NButton>
-          <NButton @click="clearFilter">清除</NButton>
-        </NSpace>
-      </NCard>
-
-      <!-- 排程表格 -->
-      <div v-if="loading" class="center-state">
-        <NSpin size="large" />
-      </div>
-
-      <template v-else>
-        <ag-grid-vue
-          class="ag-theme-quartz schedule-grid"
-          :rowData="schedules"
-          :columnDefs="columnDefs"
-          :defaultColDef="defaultColDef"
-          :pagination="false"
-          :domLayout="'autoHeight'"
-          @row-clicked="onRowClicked"
-        />
-
-        <!-- 分頁 -->
-        <div v-if="total > pageSize" class="pagination-wrapper">
-          <NPagination
-            :page="page"
-            :page-size="pageSize"
-            :item-count="total"
-            @update:page="fetchSchedules"
-          />
-        </div>
-      </template>
-    </main>
+    <template v-else>
+      <DataGrid :row-data="schedules" :column-defs="columnDefs" clickable @row-clicked="onRowClicked" />
+      <PaginationBar :page="page" :page-size="pageSize" :item-count="total" @update:page="fetchSchedules" />
+    </template>
 
     <!-- 聊天浮動按鈕 -->
     <button v-if="!chatOpen" class="chat-fab" @click="chatOpen = true">
@@ -492,7 +432,6 @@ onMounted(() => {
 
     <!-- 聊天視窗 -->
     <div v-if="chatOpen" class="chat-widget">
-      <!-- 標題列 -->
       <div class="chat-widget-header">
         <div class="chat-widget-title">
           <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
@@ -517,7 +456,6 @@ onMounted(() => {
         </NSpace>
       </div>
 
-      <!-- 訊息區域 -->
       <div ref="chatMessagesContainer" class="chat-widget-messages">
         <div v-if="chatMessages.length === 0" class="chat-welcome">
           <p>你好！我是 AI 排程助理，可以幫你管理排程。</p>
@@ -550,7 +488,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 輸入區域 -->
       <div class="chat-widget-input">
         <NInput
           v-model:value="chatInput"
@@ -581,30 +518,25 @@ onMounted(() => {
         {{ formError }}
       </NAlert>
 
-      <div class="form-group">
-        <label>標題 *</label>
+      <FormField label="標題 *">
         <NInput v-model:value="formTitle" placeholder="輸入排程標題..." />
-      </div>
+      </FormField>
 
-      <div class="form-group">
-        <label>說明</label>
+      <FormField label="說明">
         <NInput v-model:value="formDescription" type="textarea" placeholder="輸入排程說明..." :rows="3" />
-      </div>
+      </FormField>
 
-      <div class="form-group">
-        <label>地點</label>
+      <FormField label="地點">
         <NInput v-model:value="formLocation" placeholder="輸入地點..." />
-      </div>
+      </FormField>
 
       <div class="form-row">
-        <div class="form-group">
-          <label>開始時間 *</label>
+        <FormField label="開始時間 *">
           <NDatePicker v-model:value="formStartTime" type="datetime" clearable style="width: 100%;" />
-        </div>
-        <div class="form-group">
-          <label>結束時間 *</label>
+        </FormField>
+        <FormField label="結束時間 *">
           <NDatePicker v-model:value="formEndTime" type="datetime" clearable style="width: 100%;" />
-        </div>
+        </FormField>
       </div>
 
       <NCheckbox v-model:checked="formAllDay">全天活動</NCheckbox>
@@ -625,9 +557,7 @@ onMounted(() => {
       style="max-width: 480px;"
       :mask-closable="true"
     >
-      <div v-if="detailLoading" class="center-state">
-        <NSpin size="large" />
-      </div>
+      <LoadingState v-if="detailLoading" />
 
       <template v-else-if="currentSchedule">
         <NDescriptions :column="1" label-placement="left" bordered>
@@ -659,55 +589,10 @@ onMounted(() => {
         </NSpace>
       </template>
     </NModal>
-  </div>
+  </PageLayout>
 </template>
 
 <style scoped>
-.schedule-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-/* 頂部導航 */
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 40px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.nav-logo {
-  width: 36px;
-  height: 36px;
-}
-
-.nav-badge {
-  padding: 4px 10px;
-  background: #dcfce7;
-  color: #16a34a;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 主要內容 */
-.schedule-content {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 48px 24px;
-}
-
 .google-status-row {
   display: flex;
   align-items: center;
@@ -733,32 +618,6 @@ onMounted(() => {
   height: 32px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.page-header p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0;
-}
-
-.center-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -771,69 +630,11 @@ onMounted(() => {
   color: #64748b;
 }
 
-/* AG Grid */
-.schedule-grid {
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.schedule-grid :deep(.ag-row) {
-  cursor: pointer;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
 /* Form */
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-}
-
-/* RWD */
-@media (max-width: 640px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .schedule-content {
-    padding: 24px 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .page-header h1 {
-    font-size: 24px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* === 聊天浮動按鈕 === */
@@ -942,7 +743,6 @@ onMounted(() => {
   background: #eef2ff;
 }
 
-/* 訊息氣泡 */
 .chat-msg {
   display: flex;
   flex-direction: column;
@@ -1008,7 +808,6 @@ onMounted(() => {
   color: #ef4444;
 }
 
-/* Typing indicator */
 .chat-typing {
   display: flex;
   gap: 4px;
@@ -1031,7 +830,6 @@ onMounted(() => {
   30% { transform: translateY(-5px); opacity: 1; }
 }
 
-/* 輸入區域 */
 .chat-widget-input {
   display: flex;
   gap: 8px;
@@ -1045,8 +843,11 @@ onMounted(() => {
   flex: 1;
 }
 
-/* 手機版 */
 @media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
   .chat-fab {
     bottom: 16px;
     right: 16px;

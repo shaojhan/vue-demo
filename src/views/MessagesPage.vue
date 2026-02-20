@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { MessageService, UserService } from '@/api'
 import type { MessageThreadResponse, UserSearchItem } from '@/api'
 import {
-  NButton, NCard, NSpin, NEmpty, NAlert, NInput, NModal,
-  NTabs, NTabPane, NPagination, NBadge, NSpace, useDialog
+  NButton, NCard, NEmpty, NAlert, NInput, NModal,
+  NTabs, NTabPane, NBadge, NSpace, useDialog
 } from 'naive-ui'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
-import { useLogout } from '@/composables/useLogout'
 import { useModal } from '@/composables/useModal'
+import PageLayout from '@/components/PageLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
+import FormField from '@/components/FormField.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const dialog = useDialog()
-const { logout: handleLogout } = useLogout()
 
 // Tab 狀態
 type TabType = 'inbox' | 'sent'
@@ -219,97 +220,60 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="messages-page">
-    <nav class="top-nav">
-      <div class="nav-brand">
-        <svg viewBox="0 0 48 48" fill="none" class="nav-logo">
-          <rect width="48" height="48" rx="12" fill="url(#grad)"/>
-          <path d="M24 14L14 20V32L24 38L34 32V20L24 14Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span>Vue Demo</span>
-        <span class="nav-badge">訊息中心</span>
-      </div>
-      <NSpace>
-        <NButton @click="router.push('/user')">個人頁面</NButton>
-        <NButton @click="handleLogout">登出</NButton>
-      </NSpace>
-    </nav>
+  <PageLayout badge="訊息中心" max-width="900px">
+    <PageHeader title="訊息中心" description="與其他用戶交流溝通">
+      <NButton type="primary" @click="showComposeModal = true">撰寫訊息</NButton>
+    </PageHeader>
 
-    <main class="messages-content">
-      <div class="page-header">
-        <div>
-          <h1>訊息中心</h1>
-          <p>與其他用戶交流溝通</p>
-        </div>
-        <NButton type="primary" @click="showComposeModal = true">撰寫訊息</NButton>
+    <NCard>
+      <NTabs v-model:value="activeTab" type="line">
+        <NTabPane name="inbox" :tab="inboxLabel">
+          <!-- 內容統一渲染 -->
+        </NTabPane>
+        <NTabPane name="sent" tab="已發送">
+          <!-- 內容統一渲染 -->
+        </NTabPane>
+      </NTabs>
+
+      <!-- 訊息列表 -->
+      <LoadingState v-if="loading" />
+
+      <div v-else-if="messages.length === 0" style="padding: 40px 0;">
+        <NEmpty :description="activeTab === 'inbox' ? '收件匣是空的' : '尚未發送任何訊息'" />
       </div>
 
-      <NCard>
-        <NTabs v-model:value="activeTab" type="line">
-          <NTabPane name="inbox" :tab="inboxLabel">
-            <!-- 內容統一渲染 -->
-          </NTabPane>
-          <NTabPane name="sent" tab="已發送">
-            <!-- 內容統一渲染 -->
-          </NTabPane>
-        </NTabs>
-
-        <!-- 訊息列表 -->
-        <div v-if="loading" class="center-state">
-          <NSpin size="large" />
-        </div>
-
-        <div v-else-if="messages.length === 0" style="padding: 40px 0;">
-          <NEmpty :description="activeTab === 'inbox' ? '收件匣是空的' : '尚未發送任何訊息'" />
-        </div>
-
-        <div v-else class="message-list">
-          <div
-            v-for="msg in messages"
-            :key="msg.id"
-            :class="['message-item', { unread: !msg.is_read && activeTab === 'inbox' }]"
-            @click="openThread(msg.id)"
-          >
-            <div class="message-avatar">
-              {{ (activeTab === 'inbox' ? msg.sender.username : msg.recipient.username).charAt(0).toUpperCase() }}
-            </div>
-            <div class="message-body">
-              <div class="message-header">
-                <span class="message-from">
-                  {{ activeTab === 'inbox' ? msg.sender.username : msg.recipient.username }}
-                </span>
-                <span class="message-time">{{ formatDate(msg.created_at) }}</span>
-              </div>
-              <div class="message-subject">{{ msg.subject }}</div>
-              <div class="message-preview">{{ msg.content_preview }}</div>
-            </div>
-            <div class="message-meta">
-              <span v-if="msg.reply_count && msg.reply_count > 0" class="reply-count">
-                {{ msg.reply_count }} 則回覆
+      <div v-else class="message-list">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          :class="['message-item', { unread: !msg.is_read && activeTab === 'inbox' }]"
+          @click="openThread(msg.id)"
+        >
+          <div class="message-avatar">
+            {{ (activeTab === 'inbox' ? msg.sender.username : msg.recipient.username).charAt(0).toUpperCase() }}
+          </div>
+          <div class="message-body">
+            <div class="message-header">
+              <span class="message-from">
+                {{ activeTab === 'inbox' ? msg.sender.username : msg.recipient.username }}
               </span>
-              <NBadge v-if="!msg.is_read && activeTab === 'inbox'" dot />
+              <span class="message-time">{{ formatDate(msg.created_at) }}</span>
             </div>
+            <div class="message-subject">{{ msg.subject }}</div>
+            <div class="message-preview">{{ msg.content_preview }}</div>
+          </div>
+          <div class="message-meta">
+            <span v-if="msg.reply_count && msg.reply_count > 0" class="reply-count">
+              {{ msg.reply_count }} 則回覆
+            </span>
+            <NBadge v-if="!msg.is_read && activeTab === 'inbox'" dot />
           </div>
         </div>
+      </div>
 
-        <!-- 分頁 -->
-        <div v-if="total > pageSize" class="pagination-wrapper">
-          <NPagination
-            :page="page"
-            :page-size="pageSize"
-            :item-count="total"
-            @update:page="fetchMessages"
-          />
-        </div>
-      </NCard>
-    </main>
+      <!-- 分頁 -->
+      <PaginationBar :page="page" :page-size="pageSize" :item-count="total" @update:page="fetchMessages" />
+    </NCard>
 
     <!-- 撰寫訊息 Modal -->
     <NModal
@@ -328,8 +292,7 @@ onMounted(() => {
         訊息已成功發送！
       </NAlert>
 
-      <div class="form-group">
-        <label>收件人</label>
+      <FormField label="收件人">
         <div class="recipient-input">
           <NInput
             v-model:value="recipientSearch"
@@ -347,22 +310,20 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </div>
+      </FormField>
 
-      <div class="form-group">
-        <label>主旨</label>
+      <FormField label="主旨">
         <NInput v-model:value="composeSubject" placeholder="輸入訊息主旨..." />
-      </div>
+      </FormField>
 
-      <div class="form-group">
-        <label>內容</label>
+      <FormField label="內容">
         <NInput
           v-model:value="composeContent"
           type="textarea"
           placeholder="輸入訊息內容..."
           :rows="6"
         />
-      </div>
+      </FormField>
 
       <template #footer>
         <NSpace justify="end">
@@ -381,9 +342,7 @@ onMounted(() => {
       :mask-closable="true"
       @after-leave="closeThreadModal"
     >
-      <div v-if="threadLoading" class="center-state">
-        <NSpin size="large" />
-      </div>
+      <LoadingState v-if="threadLoading" />
 
       <template v-else-if="currentThread">
         <!-- 原始訊息 -->
@@ -444,81 +403,10 @@ onMounted(() => {
         </div>
       </template>
     </NModal>
-  </div>
+  </PageLayout>
 </template>
 
 <style scoped>
-.messages-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-/* 頂部導航 */
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 40px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.nav-logo {
-  width: 36px;
-  height: 36px;
-}
-
-.nav-badge {
-  padding: 4px 10px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 主要內容 */
-.messages-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 48px 24px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 36px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.page-header p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0;
-}
-
-.center-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
 /* 訊息列表 */
 .message-list {
   max-height: 600px;
@@ -617,29 +505,7 @@ onMounted(() => {
   color: #94a3b8;
 }
 
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-/* Form */
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
+/* 收件人搜尋 */
 .recipient-input {
   position: relative;
 }
@@ -753,24 +619,6 @@ onMounted(() => {
 
 /* RWD */
 @media (max-width: 640px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .messages-content {
-    padding: 24px 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .page-header h1 {
-    font-size: 24px;
-  }
-
   .message-item {
     padding: 12px 16px;
   }

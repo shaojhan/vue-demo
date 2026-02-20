@@ -4,19 +4,21 @@ import { useRouter } from 'vue-router'
 import { MqttService } from '@/api'
 import type { MQTTMessageItem } from '@/api'
 import {
-  NButton, NCard, NSpin, NAlert, NInput, NSelect,
-  NPagination, NSpace, NTag
+  NButton, NCard, NAlert, NInput, NSelect, NTag
 } from 'naive-ui'
-import { AgGridVue } from 'ag-grid-vue3'
 import type { ColDef } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
-import { useLogout } from '@/composables/useLogout'
+import PageLayout from '@/components/PageLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
+import FilterBar from '@/components/FilterBar.vue'
+import DataGrid from '@/components/DataGrid.vue'
+import SubscriptionList from '@/components/SubscriptionList.vue'
+import FormField from '@/components/FormField.vue'
 
 const router = useRouter()
-const { logout: handleLogout } = useLogout()
 
 // 連線狀態
 const connected = ref(false)
@@ -149,11 +151,6 @@ const msgColumnDefs = ref<ColDef<MQTTMessageItem>[]>([
   }
 ])
 
-const msgDefaultColDef: ColDef = {
-  sortable: true,
-  resizable: true
-}
-
 onMounted(() => {
   fetchStatus()
   fetchMessages()
@@ -161,203 +158,90 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mqtt-page">
-    <nav class="top-nav">
-      <div class="nav-brand">
-        <svg viewBox="0 0 48 48" fill="none" class="nav-logo">
-          <rect width="48" height="48" rx="12" fill="url(#grad)"/>
-          <path d="M24 14L14 20V32L24 38L34 32V20L24 14Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span>Vue Demo</span>
-        <span class="nav-badge">MQTT</span>
+  <PageLayout badge="MQTT">
+    <template #nav>
+      <NButton @click="router.push('/admin')">管理後台</NButton>
+      <NButton @click="router.push('/kafka')">Kafka 管理</NButton>
+    </template>
+
+    <PageHeader title="MQTT 管理" description="管理 MQTT 連線、訂閱與訊息" />
+
+    <!-- 連線狀態 -->
+    <NCard title="連線狀態" style="margin-bottom: 24px;">
+      <template #header-extra>
+        <NButton size="small" :loading="statusLoading" @click="fetchStatus">重新整理</NButton>
+      </template>
+      <div class="status-row">
+        <span class="status-label">狀態</span>
+        <NTag :type="connected ? 'success' : 'error'" size="small">
+          {{ connected ? '已連線' : '未連線' }}
+        </NTag>
       </div>
-      <NSpace>
-        <NButton @click="router.push('/admin')">管理後台</NButton>
-        <NButton @click="router.push('/user')">個人頁面</NButton>
-        <NButton @click="handleLogout">登出</NButton>
-      </NSpace>
-    </nav>
+    </NCard>
 
-    <main class="mqtt-content">
-      <div class="page-header">
-        <h1>MQTT 管理</h1>
-        <p>管理 MQTT 連線、訂閱與訊息</p>
+    <!-- 訂閱管理 -->
+    <NCard title="訂閱管理" style="margin-bottom: 24px;">
+      <template #header-extra>
+        <span style="font-size: 14px; color: #64748b;">{{ subscriptions.length }} 個主題</span>
+      </template>
+
+      <NAlert v-if="subscribeError" type="error" :bordered="false" style="margin-bottom: 16px;">
+        {{ subscribeError }}
+      </NAlert>
+
+      <SubscriptionList :topics="subscriptions" @unsubscribe="handleUnsubscribe" />
+
+      <div class="subscribe-form">
+        <NInput v-model:value="newTopic" placeholder="輸入主題 (例如: sensor/temp)" style="flex: 1;" />
+        <NSelect v-model:value="newQos" :options="qosOptions" style="width: 120px;" />
+        <NButton type="primary" :loading="subscribing" @click="handleSubscribe">訂閱</NButton>
       </div>
+    </NCard>
 
-      <!-- 連線狀態 -->
-      <NCard title="連線狀態" style="margin-bottom: 24px;">
-        <template #header-extra>
-          <NButton size="small" :loading="statusLoading" @click="fetchStatus">重新整理</NButton>
-        </template>
-        <div class="status-row">
-          <span class="status-label">狀態</span>
-          <NTag :type="connected ? 'success' : 'error'" size="small">
-            {{ connected ? '已連線' : '未連線' }}
-          </NTag>
+    <!-- 發送訊息 -->
+    <NCard title="發送訊息" style="margin-bottom: 24px;">
+      <NAlert v-if="publishError" type="error" :bordered="false" style="margin-bottom: 16px;">
+        {{ publishError }}
+      </NAlert>
+      <NAlert v-if="publishSuccess" type="success" :bordered="false" style="margin-bottom: 16px;">
+        訊息已發送
+      </NAlert>
+
+      <div class="publish-form">
+        <div class="publish-row">
+          <FormField label="主題" style="flex: 1;">
+            <NInput v-model:value="publishTopic" placeholder="輸入發送主題" />
+          </FormField>
+          <FormField label="QoS" style="width: 120px;">
+            <NSelect v-model:value="publishQos" :options="qosOptions" />
+          </FormField>
         </div>
-      </NCard>
+        <FormField label="訊息內容">
+          <NInput v-model:value="publishPayload" type="textarea" placeholder="輸入訊息內容" :rows="3" />
+        </FormField>
+        <NButton type="success" block :loading="publishLoading" @click="handlePublish">發送</NButton>
+      </div>
+    </NCard>
 
-      <!-- 訂閱管理 -->
-      <NCard title="訂閱管理" style="margin-bottom: 24px;">
-        <template #header-extra>
-          <span style="font-size: 14px; color: #64748b;">{{ subscriptions.length }} 個主題</span>
-        </template>
+    <!-- 訊息紀錄 -->
+    <NCard title="訊息紀錄">
+      <template #header-extra>
+        <span style="font-size: 14px; color: #64748b;">共 {{ messageTotal }} 筆</span>
+      </template>
 
-        <NAlert v-if="subscribeError" type="error" :bordered="false" style="margin-bottom: 16px;">
-          {{ subscribeError }}
-        </NAlert>
+      <FilterBar v-model="topicFilter" placeholder="依主題篩選..." />
 
-        <!-- 目前訂閱 -->
-        <div v-if="subscriptions.length > 0" class="subscription-list">
-          <div v-for="topic in subscriptions" :key="topic" class="subscription-item">
-            <code class="topic-name">{{ topic }}</code>
-            <NButton size="tiny" type="error" secondary @click="handleUnsubscribe(topic)">取消訂閱</NButton>
-          </div>
-        </div>
-        <div v-else class="empty-hint">目前沒有訂閱任何主題</div>
+      <LoadingState v-if="messageLoading" />
+      <template v-else>
+        <DataGrid :row-data="messages as MQTTMessageItem[]" :column-defs="msgColumnDefs" />
+      </template>
 
-        <!-- 新增訂閱 -->
-        <div class="subscribe-form">
-          <NInput v-model:value="newTopic" placeholder="輸入主題 (例如: sensor/temp)" style="flex: 1;" />
-          <NSelect v-model:value="newQos" :options="qosOptions" style="width: 120px;" />
-          <NButton type="primary" :loading="subscribing" @click="handleSubscribe">訂閱</NButton>
-        </div>
-      </NCard>
-
-      <!-- 發送訊息 -->
-      <NCard title="發送訊息" style="margin-bottom: 24px;">
-        <NAlert v-if="publishError" type="error" :bordered="false" style="margin-bottom: 16px;">
-          {{ publishError }}
-        </NAlert>
-        <NAlert v-if="publishSuccess" type="success" :bordered="false" style="margin-bottom: 16px;">
-          訊息已發送
-        </NAlert>
-
-        <div class="publish-form">
-          <div class="publish-row">
-            <div class="form-group" style="flex: 1;">
-              <label>主題</label>
-              <NInput v-model:value="publishTopic" placeholder="輸入發送主題" />
-            </div>
-            <div class="form-group" style="width: 120px;">
-              <label>QoS</label>
-              <NSelect v-model:value="publishQos" :options="qosOptions" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>訊息內容</label>
-            <NInput v-model:value="publishPayload" type="textarea" placeholder="輸入訊息內容" :rows="3" />
-          </div>
-          <NButton type="success" block :loading="publishLoading" @click="handlePublish">發送</NButton>
-        </div>
-      </NCard>
-
-      <!-- 訊息紀錄 -->
-      <NCard title="訊息紀錄">
-        <template #header-extra>
-          <span style="font-size: 14px; color: #64748b;">共 {{ messageTotal }} 筆</span>
-        </template>
-
-        <div class="filter-bar">
-          <NInput v-model:value="topicFilter" placeholder="依主題篩選..." clearable style="max-width: 300px;" />
-        </div>
-
-        <div v-if="messageLoading" class="center-state">
-          <NSpin size="large" />
-        </div>
-        <template v-else>
-          <ag-grid-vue
-            class="ag-theme-quartz message-grid"
-            :rowData="messages as MQTTMessageItem[]"
-            :columnDefs="msgColumnDefs"
-            :defaultColDef="msgDefaultColDef"
-            :pagination="false"
-            :domLayout="'autoHeight'"
-          />
-        </template>
-
-        <div v-if="messageTotal > messagePageSize" class="pagination-wrapper">
-          <NPagination
-            :page="messagePage"
-            :page-size="messagePageSize"
-            :item-count="messageTotal"
-            @update:page="fetchMessages"
-          />
-        </div>
-      </NCard>
-    </main>
-  </div>
+      <PaginationBar :page="messagePage" :page-size="messagePageSize" :item-count="messageTotal" @update:page="fetchMessages" />
+    </NCard>
+  </PageLayout>
 </template>
 
 <style scoped>
-.mqtt-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 40px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.nav-logo {
-  width: 36px;
-  height: 36px;
-}
-
-.nav-badge {
-  padding: 4px 10px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mqtt-content {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 48px 24px;
-}
-
-.page-header {
-  margin-bottom: 36px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.page-header p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* 連線狀態 */
 .status-row {
   display: flex;
   align-items: center;
@@ -370,40 +254,6 @@ onMounted(() => {
   color: #374151;
 }
 
-/* 訂閱管理 */
-.subscription-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.subscription-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-}
-
-.topic-name {
-  font-family: monospace;
-  font-size: 14px;
-  color: #1e293b;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.empty-hint {
-  text-align: center;
-  padding: 24px;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
 .subscribe-form {
   display: flex;
   gap: 12px;
@@ -412,7 +262,6 @@ onMounted(() => {
   border-top: 1px solid #e2e8f0;
 }
 
-/* 發送訊息 */
 .publish-form {
   display: flex;
   flex-direction: column;
@@ -424,55 +273,7 @@ onMounted(() => {
   gap: 16px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-/* 訊息紀錄 */
-.filter-bar {
-  margin-bottom: 16px;
-}
-
-.center-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
-.message-grid {
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0 0;
-}
-
-/* RWD */
 @media (max-width: 640px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .mqtt-content {
-    padding: 32px 16px;
-  }
-
-  .page-header h1 {
-    font-size: 24px;
-  }
-
   .subscribe-form {
     flex-direction: column;
     align-items: stretch;
@@ -482,7 +283,7 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .publish-row .form-group {
+  .publish-row :deep(.form-group) {
     width: 100% !important;
   }
 }

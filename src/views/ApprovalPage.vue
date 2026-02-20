@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApprovalService } from '@/api'
 import { ApprovalStatus } from '@/api/models/ApprovalStatus'
@@ -8,23 +7,24 @@ import { ApprovalType } from '@/api/models/ApprovalType'
 import { LeaveType } from '@/api/models/LeaveType'
 import type { ApprovalListItem, ApprovalRequestResponse, ApprovalStepResponse } from '@/api'
 import {
-  NButton, NCard, NSpin, NAlert, NInput, NInputNumber, NModal,
-  NPagination, NSpace, NTag, NTabs, NTabPane, NSelect, NDatePicker,
+  NButton, NCard, NAlert, NInput, NInputNumber, NModal,
+  NSpace, NTag, NTabs, NTabPane, NSelect, NDatePicker,
   NDescriptions, NDescriptionsItem, useDialog
 } from 'naive-ui'
-import { AgGridVue } from 'ag-grid-vue3'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
-import { useLogout } from '@/composables/useLogout'
 import { useModal } from '@/composables/useModal'
+import PageLayout from '@/components/PageLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import DataGrid from '@/components/DataGrid.vue'
+import FormField from '@/components/FormField.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const dialog = useDialog()
-const { logout: handleLogout } = useLogout()
 
 // === 我的申請列表 ===
 const myStatusFilter = ref<ApprovalStatus | null>(null)
@@ -276,11 +276,6 @@ const commonColumnDefs: ColDef<ApprovalListItem>[] = [
 const myColumnDefs = ref<ColDef<ApprovalListItem>[]>([...commonColumnDefs])
 const pendingColumnDefs = ref<ColDef<ApprovalListItem>[]>([...commonColumnDefs])
 
-const defaultColDef: ColDef = {
-  sortable: true,
-  resizable: true
-}
-
 const onMyRowClicked = (event: RowClickedEvent<ApprovalListItem>) => {
   if (event.data) openDetail(event.data.id)
 }
@@ -362,114 +357,48 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="approval-page">
-    <nav class="top-nav">
-      <div class="nav-brand">
-        <svg viewBox="0 0 48 48" fill="none" class="nav-logo">
-          <rect width="48" height="48" rx="12" fill="url(#grad)"/>
-          <path d="M24 14L14 20V32L24 38L34 32V20L24 14Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-          <defs>
-            <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span>Vue Demo</span>
-        <span class="nav-badge">簽核管理</span>
-      </div>
-      <NSpace>
-        <NButton @click="router.push('/user')">個人頁面</NButton>
-        <NButton @click="handleLogout">登出</NButton>
-      </NSpace>
-    </nav>
+  <PageLayout badge="簽核管理">
+    <PageHeader title="簽核管理" description="管理您的請假與費用報銷申請">
+      <NButton type="success" @click="handleOpenCreate">建立申請</NButton>
+    </PageHeader>
 
-    <main class="approval-content">
-      <div class="page-header">
-        <div>
-          <h1>簽核管理</h1>
-          <p>管理您的請假與費用報銷申請</p>
-        </div>
-        <NButton type="success" @click="handleOpenCreate">建立申請</NButton>
-      </div>
+    <NTabs type="line" animated>
+      <!-- Tab 1: 我的申請 -->
+      <NTabPane name="my-requests" tab="我的申請">
+        <NCard size="small" style="margin-bottom: 16px;">
+          <NSpace align="center">
+            <span style="font-size: 13px; color: #64748b;">狀態篩選：</span>
+            <NSelect
+              :value="myStatusFilter || ''"
+              :options="statusFilterOptions"
+              style="width: 140px;"
+              @update:value="handleStatusFilter"
+            />
+          </NSpace>
+        </NCard>
 
-      <NTabs type="line" animated>
-        <!-- Tab 1: 我的申請 -->
-        <NTabPane name="my-requests" tab="我的申請">
-          <NCard size="small" style="margin-bottom: 16px;">
-            <NSpace align="center">
-              <span style="font-size: 13px; color: #64748b;">狀態篩選：</span>
-              <NSelect
-                :value="myStatusFilter || ''"
-                :options="statusFilterOptions"
-                style="width: 140px;"
-                @update:value="handleStatusFilter"
-              />
-            </NSpace>
-          </NCard>
-
-          <div v-if="myLoading" class="center-state">
-            <NSpin size="large" />
-          </div>
+        <LoadingState v-if="myLoading" />
+        <template v-else>
+          <EmptyState v-if="myRequests.length === 0" message="尚無申請紀錄" />
           <template v-else>
-            <div v-if="myRequests.length === 0" class="empty-state">
-              <p>尚無申請紀錄</p>
-            </div>
-            <template v-else>
-              <ag-grid-vue
-                class="ag-theme-quartz approval-grid"
-                :rowData="myRequests"
-                :columnDefs="myColumnDefs"
-                :defaultColDef="defaultColDef"
-                :pagination="false"
-                :domLayout="'autoHeight'"
-                @row-clicked="onMyRowClicked"
-              />
-              <div v-if="myTotal > myPageSize" class="pagination-wrapper">
-                <NPagination
-                  :page="myPage"
-                  :page-size="myPageSize"
-                  :item-count="myTotal"
-                  @update:page="fetchMyRequests"
-                />
-              </div>
-            </template>
+            <DataGrid :row-data="myRequests" :column-defs="myColumnDefs" clickable @row-clicked="onMyRowClicked" />
+            <PaginationBar :page="myPage" :page-size="myPageSize" :item-count="myTotal" @update:page="fetchMyRequests" />
           </template>
-        </NTabPane>
+        </template>
+      </NTabPane>
 
-        <!-- Tab 2: 待我審批 -->
-        <NTabPane name="pending" tab="待我審批">
-          <div v-if="pendingLoading" class="center-state">
-            <NSpin size="large" />
-          </div>
+      <!-- Tab 2: 待我審批 -->
+      <NTabPane name="pending" tab="待我審批">
+        <LoadingState v-if="pendingLoading" />
+        <template v-else>
+          <EmptyState v-if="pendingRequests.length === 0" message="目前沒有待審批項目" />
           <template v-else>
-            <div v-if="pendingRequests.length === 0" class="empty-state">
-              <p>目前沒有待審批項目</p>
-            </div>
-            <template v-else>
-              <ag-grid-vue
-                class="ag-theme-quartz approval-grid"
-                :rowData="pendingRequests"
-                :columnDefs="pendingColumnDefs"
-                :defaultColDef="defaultColDef"
-                :pagination="false"
-                :domLayout="'autoHeight'"
-                @row-clicked="onPendingRowClicked"
-              />
-              <div v-if="pendingTotal > pendingPageSize" class="pagination-wrapper">
-                <NPagination
-                  :page="pendingPage"
-                  :page-size="pendingPageSize"
-                  :item-count="pendingTotal"
-                  @update:page="fetchPending"
-                />
-              </div>
-            </template>
+            <DataGrid :row-data="pendingRequests" :column-defs="pendingColumnDefs" clickable @row-clicked="onPendingRowClicked" />
+            <PaginationBar :page="pendingPage" :page-size="pendingPageSize" :item-count="pendingTotal" @update:page="fetchPending" />
           </template>
-        </NTabPane>
-      </NTabs>
-    </main>
+        </template>
+      </NTabPane>
+    </NTabs>
 
     <!-- 建立申請 Modal -->
     <NModal
@@ -483,53 +412,44 @@ onMounted(() => {
         {{ createFormError }}
       </NAlert>
 
-      <div class="form-group">
-        <label>申請類型</label>
+      <FormField label="申請類型">
         <NSelect v-model:value="createType" :options="typeOptions" />
-      </div>
+      </FormField>
 
       <!-- 請假表單 -->
       <template v-if="createType === ApprovalType.LEAVE">
-        <div class="form-group">
-          <label>假別 *</label>
+        <FormField label="假別 *">
           <NSelect v-model:value="leaveType" :options="leaveTypeOptions" />
-        </div>
+        </FormField>
         <div class="form-row">
-          <div class="form-group">
-            <label>開始日期 *</label>
+          <FormField label="開始日期 *">
             <NDatePicker v-model:value="leaveStartDate" type="date" clearable style="width: 100%;" />
-          </div>
-          <div class="form-group">
-            <label>結束日期 *</label>
+          </FormField>
+          <FormField label="結束日期 *">
             <NDatePicker v-model:value="leaveEndDate" type="date" clearable style="width: 100%;" />
-          </div>
+          </FormField>
         </div>
-        <div class="form-group">
-          <label>請假原因 *</label>
+        <FormField label="請假原因 *">
           <NInput v-model:value="leaveReason" type="textarea" placeholder="請輸入請假原因..." :rows="3" />
-        </div>
+        </FormField>
       </template>
 
       <!-- 費用報銷表單 -->
       <template v-else>
         <div class="form-row">
-          <div class="form-group">
-            <label>金額 *</label>
+          <FormField label="金額 *">
             <NInputNumber v-model:value="expenseAmount" :min="0" placeholder="輸入金額" style="width: 100%;" />
-          </div>
-          <div class="form-group">
-            <label>類別 *</label>
+          </FormField>
+          <FormField label="類別 *">
             <NInput v-model:value="expenseCategory" placeholder="例如：交通、餐飲、辦公用品" />
-          </div>
+          </FormField>
         </div>
-        <div class="form-group">
-          <label>說明 *</label>
+        <FormField label="說明 *">
           <NInput v-model:value="expenseDescription" type="textarea" placeholder="請輸入費用說明..." :rows="3" />
-        </div>
-        <div class="form-group">
-          <label>收據連結</label>
+        </FormField>
+        <FormField label="收據連結">
           <NInput v-model:value="expenseReceiptUrl" placeholder="選填，貼上收據圖片連結" />
-        </div>
+        </FormField>
       </template>
 
       <template #footer>
@@ -548,9 +468,7 @@ onMounted(() => {
       style="max-width: 560px;"
       :mask-closable="true"
     >
-      <div v-if="detailLoading" class="center-state">
-        <NSpin size="large" />
-      </div>
+      <LoadingState v-if="detailLoading" />
 
       <template v-else-if="currentDetail">
         <!-- 狀態標籤 -->
@@ -596,10 +514,9 @@ onMounted(() => {
 
         <!-- 審批備註輸入 -->
         <div v-if="isCurrentApprover(currentDetail)" style="margin-top: 20px;">
-          <div class="form-group">
-            <label>審批備註</label>
+          <FormField label="審批備註">
             <NInput v-model:value="actionComment" type="textarea" placeholder="選填，輸入審批備註..." :rows="2" />
-          </div>
+          </FormField>
         </div>
       </template>
 
@@ -634,119 +551,10 @@ onMounted(() => {
         </NSpace>
       </template>
     </NModal>
-  </div>
+  </PageLayout>
 </template>
 
 <style scoped>
-.approval-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 40px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.nav-logo {
-  width: 36px;
-  height: 36px;
-}
-
-.nav-badge {
-  padding: 4px 10px;
-  background: #ede9fe;
-  color: #7c3aed;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.approval-content {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 48px 24px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.page-header p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0;
-}
-
-.center-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #94a3b8;
-  font-size: 15px;
-}
-
-.approval-grid {
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.approval-grid :deep(.ag-row) {
-  cursor: pointer;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-/* Form */
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -832,24 +640,6 @@ onMounted(() => {
 
 /* RWD */
 @media (max-width: 640px) {
-  .top-nav {
-    padding: 12px 16px;
-  }
-
-  .approval-content {
-    padding: 24px 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .page-header h1 {
-    font-size: 24px;
-  }
-
   .form-row {
     grid-template-columns: 1fr;
   }
