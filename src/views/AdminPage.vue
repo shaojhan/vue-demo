@@ -6,7 +6,7 @@ import { Department } from '@/api'
 import type { AssignEmployeeResponse, UserListItem, EmployeeListItem, CsvUploadResponse } from '@/api'
 import {
   NButton, NCard, NSpin, NAlert, NInput, NInputNumber, NSelect,
-  NSpace, NTag, NDataTable, NProgress
+  NSpace, NTag, NDataTable, NProgress, NTabs, NTabPane
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { usePaginatedList } from '@/composables/usePaginatedList'
@@ -17,6 +17,8 @@ import PaginationBar from '@/components/PaginationBar.vue'
 import FormField from '@/components/FormField.vue'
 
 const router = useRouter()
+const activeTab = ref('users')
+
 // 指派員工
 const userId = ref('')
 const idno = ref('')
@@ -225,209 +227,220 @@ const csvTaskStatusLabel: Record<string, string> = {
 
     <PageHeader title="管理員後台" description="管理會員與員工資料" />
 
-    <!-- 指派員工 -->
-    <NCard title="指派員工" style="margin-bottom: 24px;">
-      <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">將現有會員帳號指派為員工身份</span>
-      </template>
+    <NTabs v-model:value="activeTab" type="line" animated>
+      <!-- 會員列表 -->
+      <NTabPane name="users" tab="會員列表">
+        <NCard style="margin-top: 16px;">
+          <template #header>
+            會員列表
+            <span style="font-size: 14px; font-weight: 400; color: #64748b; margin-left: 8px;">共 {{ userTotal }} 位會員</span>
+          </template>
 
-      <form @submit.prevent="handleSubmit">
-        <NAlert v-if="errorMessage" type="error" :bordered="false" style="margin-bottom: 16px;">
-          {{ errorMessage }}
-        </NAlert>
+          <NSpin :show="userLoading">
+            <NDataTable
+              :columns="userColumns"
+              :data="users"
+              :bordered="false"
+              :single-line="false"
+              size="small"
+            />
+          </NSpin>
 
-        <NAlert v-if="successResult" type="success" :bordered="false" style="margin-bottom: 16px;">
-          員工指派成功！員工編號: {{ successResult.idno }} ｜
-          部門: {{ departmentLabels[successResult.department] }} ｜
-          角色: {{ successResult.role?.name || '-' }}
-        </NAlert>
+          <PaginationBar :page="userPage" :page-size="userPageSize" :item-count="userTotal" @update:page="fetchUsers" />
+        </NCard>
+      </NTabPane>
 
-        <div class="form-grid">
-          <FormField label="使用者 ID (UUID)">
-            <NInput v-model:value="userId" placeholder="請輸入使用者 UUID" />
-          </FormField>
+      <!-- 員工列表 -->
+      <NTabPane name="employees" tab="員工列表">
+        <NCard style="margin-top: 16px;">
+          <template #header>
+            員工列表
+            <span style="font-size: 14px; font-weight: 400; color: #64748b; margin-left: 8px;">共 {{ employeeTotal }} 位員工</span>
+          </template>
 
-          <FormField label="員工編號">
-            <NInput v-model:value="idno" placeholder="例如: EMP001" />
-          </FormField>
+          <NSpin :show="employeeLoading">
+            <NDataTable
+              :columns="employeeColumns"
+              :data="employees"
+              :bordered="false"
+              :single-line="false"
+              size="small"
+            />
+          </NSpin>
 
-          <FormField label="部門">
-            <NSelect v-model:value="department" :options="departmentOptions" />
-          </FormField>
+          <PaginationBar :page="employeePage" :page-size="employeePageSize" :item-count="employeeTotal" @update:page="fetchEmployees" />
+        </NCard>
+      </NTabPane>
 
-          <FormField label="角色 ID">
-            <NInputNumber v-model:value="roleId" placeholder="請輸入角色 ID" :min="1" style="width: 100%;" />
-          </FormField>
-        </div>
+      <!-- 指派員工 -->
+      <NTabPane name="assign" tab="指派員工">
+        <!-- 指派表單 -->
+        <NCard title="指派員工" style="margin-top: 16px; margin-bottom: 24px;">
+          <template #header-extra>
+            <span style="font-size: 14px; color: #64748b;">將現有會員帳號指派為員工身份</span>
+          </template>
 
-        <NButton
-          type="primary"
-          block
-          :loading="isLoading"
-          attr-type="submit"
-          style="margin-top: 20px;"
-        >
-          指派員工
-        </NButton>
-      </form>
-    </NCard>
+          <form @submit.prevent="handleSubmit">
+            <NAlert v-if="errorMessage" type="error" :bordered="false" style="margin-bottom: 16px;">
+              {{ errorMessage }}
+            </NAlert>
 
-    <!-- CSV 批次上傳 -->
-    <NCard title="CSV 批次建立員工" style="margin-bottom: 24px;">
-      <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">上傳 CSV 檔案批次建立員工帳號</span>
-      </template>
+            <NAlert v-if="successResult" type="success" :bordered="false" style="margin-bottom: 16px;">
+              員工指派成功！員工編號: {{ successResult.idno }} ｜
+              部門: {{ departmentLabels[successResult.department] }} ｜
+              角色: {{ successResult.role?.name || '-' }}
+            </NAlert>
 
-      <div class="csv-format-hint">
-        <div class="hint-title">CSV 格式說明</div>
-        <code class="hint-code">idno,department,email,uid,role_id<br/>EMP001,IT,john@example.com,john,1<br/>EMP002,HR,jane@example.com,jane,2</code>
-        <div class="hint-note">部門代碼：IT、HR、PR、RD、BD</div>
-      </div>
+            <div class="form-grid">
+              <FormField label="使用者 ID (UUID)">
+                <NInput v-model:value="userId" placeholder="請輸入使用者 UUID" />
+              </FormField>
 
-      <NAlert v-if="csvError" type="error" :bordered="false" style="margin-bottom: 16px;">
-        {{ csvError }}
-      </NAlert>
+              <FormField label="員工編號">
+                <NInput v-model:value="idno" placeholder="例如: EMP001" />
+              </FormField>
 
-      <!-- 任務進度 -->
-      <div v-if="csvTaskId" class="task-progress" style="margin-bottom: 16px;">
-        <div class="task-progress-header">
-          <div class="task-progress-info">
-            <NTag :type="csvTaskStatus === 'SUCCESS' ? 'success' : csvTaskStatus === 'FAILURE' ? 'error' : csvTaskStatus === 'REVOKED' ? 'warning' : 'info'" size="small">
-              {{ csvTaskStatusLabel[csvTaskStatus] || csvTaskStatus }}
-            </NTag>
-            <span class="task-id">{{ csvTaskId }}</span>
-          </div>
-          <NSpace>
-            <NButton v-if="csvTaskRunning" size="small" type="error" secondary @click="cancelCsvTask">取消任務</NButton>
-            <NButton v-if="!csvTaskRunning" size="small" secondary @click="resetCsvTask">清除</NButton>
-          </NSpace>
-        </div>
+              <FormField label="部門">
+                <NSelect v-model:value="department" :options="departmentOptions" />
+              </FormField>
 
-        <div v-if="csvTaskStatus === 'PENDING' || csvTaskStatus === 'STARTED'" class="task-progress-body">
-          <NSpin size="small" />
-          <span class="task-progress-text">等待處理中...</span>
-        </div>
+              <FormField label="角色 ID">
+                <NInputNumber v-model:value="roleId" placeholder="請輸入角色 ID" :min="1" style="width: 100%;" />
+              </FormField>
+            </div>
 
-        <div v-else-if="csvTaskStatus === 'PROGRESS' && csvTaskProgress" class="task-progress-body">
-          <NProgress
-            type="line"
-            :percentage="Math.round(csvTaskProgress.percent ?? 0)"
-            :show-indicator="true"
-            status="success"
-          />
-          <div class="task-progress-detail">
-            <span>{{ csvTaskProgress.current ?? 0 }} / {{ csvTaskProgress.total ?? 0 }}</span>
-            <span v-if="csvTaskProgress.current_idno" class="task-current-item">{{ csvTaskProgress.current_idno }}</span>
-          </div>
-        </div>
-
-        <div v-else-if="csvTaskStatus === 'FAILURE'" class="task-progress-body">
-          <NAlert type="error" :bordered="false">{{ csvTaskError || '任務執行失敗' }}</NAlert>
-        </div>
-
-        <div v-else-if="csvTaskStatus === 'REVOKED'" class="task-progress-body">
-          <NAlert type="warning" :bordered="false">任務已取消</NAlert>
-        </div>
-      </div>
-
-      <!-- CSV 上傳結果 -->
-      <div v-if="csvResult" class="upload-result" style="margin-bottom: 16px;">
-        <div class="result-summary">
-          <div class="result-stat total">
-            <span class="stat-value">{{ csvResult.total }}</span>
-            <span class="stat-label">總筆數</span>
-          </div>
-          <div class="result-stat success">
-            <span class="stat-value">{{ csvResult.success_count }}</span>
-            <span class="stat-label">成功</span>
-          </div>
-          <div class="result-stat failure">
-            <span class="stat-value">{{ csvResult.failure_count }}</span>
-            <span class="stat-label">失敗</span>
-          </div>
-        </div>
-        <div v-if="csvResult.results.length > 0" class="result-details">
-          <div class="result-list">
-            <div
-              v-for="item in csvResult.results"
-              :key="item.row"
-              class="result-item"
+            <NButton
+              type="primary"
+              block
+              :loading="isLoading"
+              attr-type="submit"
+              style="margin-top: 20px;"
             >
-              <span class="item-row">第 {{ item.row }} 行</span>
-              <span class="item-idno">{{ item.idno }}</span>
-              <NTag :type="item.success ? 'success' : 'error'" size="small">
-                {{ item.success ? '成功' : '失敗' }}
-              </NTag>
-              <span class="item-message">{{ item.message }}</span>
+              指派員工
+            </NButton>
+          </form>
+        </NCard>
+
+        <!-- CSV 批次上傳 -->
+        <NCard title="CSV 批次建立員工">
+          <template #header-extra>
+            <span style="font-size: 14px; color: #64748b;">上傳 CSV 檔案批次建立員工帳號</span>
+          </template>
+
+          <div class="csv-format-hint">
+            <div class="hint-title">CSV 格式說明</div>
+            <code class="hint-code">idno,department,email,uid,role_id<br/>EMP001,IT,john@example.com,john,1<br/>EMP002,HR,jane@example.com,jane,2</code>
+            <div class="hint-note">部門代碼：IT、HR、PR、RD、BD</div>
+          </div>
+
+          <NAlert v-if="csvError" type="error" :bordered="false" style="margin-bottom: 16px;">
+            {{ csvError }}
+          </NAlert>
+
+          <!-- 任務進度 -->
+          <div v-if="csvTaskId" class="task-progress" style="margin-bottom: 16px;">
+            <div class="task-progress-header">
+              <div class="task-progress-info">
+                <NTag :type="csvTaskStatus === 'SUCCESS' ? 'success' : csvTaskStatus === 'FAILURE' ? 'error' : csvTaskStatus === 'REVOKED' ? 'warning' : 'info'" size="small">
+                  {{ csvTaskStatusLabel[csvTaskStatus] || csvTaskStatus }}
+                </NTag>
+                <span class="task-id">{{ csvTaskId }}</span>
+              </div>
+              <NSpace>
+                <NButton v-if="csvTaskRunning" size="small" type="error" secondary @click="cancelCsvTask">取消任務</NButton>
+                <NButton v-if="!csvTaskRunning" size="small" secondary @click="resetCsvTask">清除</NButton>
+              </NSpace>
+            </div>
+
+            <div v-if="csvTaskStatus === 'PENDING' || csvTaskStatus === 'STARTED'" class="task-progress-body">
+              <NSpin size="small" />
+              <span class="task-progress-text">等待處理中...</span>
+            </div>
+
+            <div v-else-if="csvTaskStatus === 'PROGRESS' && csvTaskProgress" class="task-progress-body">
+              <NProgress
+                type="line"
+                :percentage="Math.round(csvTaskProgress.percent ?? 0)"
+                :show-indicator="true"
+                status="success"
+              />
+              <div class="task-progress-detail">
+                <span>{{ csvTaskProgress.current ?? 0 }} / {{ csvTaskProgress.total ?? 0 }}</span>
+                <span v-if="csvTaskProgress.current_idno" class="task-current-item">{{ csvTaskProgress.current_idno }}</span>
+              </div>
+            </div>
+
+            <div v-else-if="csvTaskStatus === 'FAILURE'" class="task-progress-body">
+              <NAlert type="error" :bordered="false">{{ csvTaskError || '任務執行失敗' }}</NAlert>
+            </div>
+
+            <div v-else-if="csvTaskStatus === 'REVOKED'" class="task-progress-body">
+              <NAlert type="warning" :bordered="false">任務已取消</NAlert>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div v-if="!csvTaskRunning" class="file-input-wrap">
-        <input
-          id="csvFile"
-          type="file"
-          accept=".csv"
-          class="file-input"
-          @change="handleFileChange"
-        />
-        <label for="csvFile" class="file-label">
-          <span v-if="csvFile">{{ csvFile.name }}</span>
-          <span v-else>選擇 CSV 檔案</span>
-        </label>
-      </div>
+          <!-- CSV 上傳結果 -->
+          <div v-if="csvResult" class="upload-result" style="margin-bottom: 16px;">
+            <div class="result-summary">
+              <div class="result-stat total">
+                <span class="stat-value">{{ csvResult.total }}</span>
+                <span class="stat-label">總筆數</span>
+              </div>
+              <div class="result-stat success">
+                <span class="stat-value">{{ csvResult.success_count }}</span>
+                <span class="stat-label">成功</span>
+              </div>
+              <div class="result-stat failure">
+                <span class="stat-value">{{ csvResult.failure_count }}</span>
+                <span class="stat-label">失敗</span>
+              </div>
+            </div>
+            <div v-if="csvResult.results.length > 0" class="result-details">
+              <div class="result-list">
+                <div
+                  v-for="item in csvResult.results"
+                  :key="item.row"
+                  class="result-item"
+                >
+                  <span class="item-row">第 {{ item.row }} 行</span>
+                  <span class="item-idno">{{ item.idno }}</span>
+                  <NTag :type="item.success ? 'success' : 'error'" size="small">
+                    {{ item.success ? '成功' : '失敗' }}
+                  </NTag>
+                  <span class="item-message">{{ item.message }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <NButton
-        v-if="!csvTaskRunning"
-        type="success"
-        block
-        :loading="csvUploading"
-        :disabled="!csvFile"
-        style="margin-top: 16px;"
-        @click="handleCsvUpload"
-      >
-        上傳並建立員工
-      </NButton>
-    </NCard>
+          <div v-if="!csvTaskRunning" class="file-input-wrap">
+            <input
+              id="csvFile"
+              type="file"
+              accept=".csv"
+              class="file-input"
+              @change="handleFileChange"
+            />
+            <label for="csvFile" class="file-label">
+              <span v-if="csvFile">{{ csvFile.name }}</span>
+              <span v-else>選擇 CSV 檔案</span>
+            </label>
+          </div>
 
-    <!-- 會員列表 -->
-    <NCard title="會員列表" style="margin-bottom: 24px;">
-      <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">共 {{ userTotal }} 位會員</span>
-      </template>
-
-      <NSpin :show="userLoading">
-        <NDataTable
-          :columns="userColumns"
-          :data="users"
-          :bordered="false"
-          :single-line="false"
-          size="small"
-        />
-      </NSpin>
-
-      <PaginationBar :page="userPage" :page-size="userPageSize" :item-count="userTotal" @update:page="fetchUsers" />
-    </NCard>
-
-    <!-- 員工列表 -->
-    <NCard title="員工列表">
-      <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">共 {{ employeeTotal }} 位員工</span>
-      </template>
-
-      <NSpin :show="employeeLoading">
-        <NDataTable
-          :columns="employeeColumns"
-          :data="employees"
-          :bordered="false"
-          :single-line="false"
-          size="small"
-        />
-      </NSpin>
-
-      <PaginationBar :page="employeePage" :page-size="employeePageSize" :item-count="employeeTotal" @update:page="fetchEmployees" />
-    </NCard>
+          <NButton
+            v-if="!csvTaskRunning"
+            type="success"
+            block
+            :loading="csvUploading"
+            :disabled="!csvFile"
+            style="margin-top: 16px;"
+            @click="handleCsvUpload"
+          >
+            上傳並建立員工
+          </NButton>
+        </NCard>
+      </NTabPane>
+    </NTabs>
   </PageLayout>
 </template>
 
