@@ -24,17 +24,20 @@ export class OauthService {
      * Google Callback
      * Handle Google OAuth2 callback. Redirects to frontend with a short-lived authorization code.
      * @param code Authorization code from Google
+     * @param state CSRF state token
      * @returns any Successful Response
      * @throws ApiError
      */
     public static googleCallback(
         code: string,
+        state: string,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/auth/google/callback',
             query: {
                 'code': code,
+                'state': state,
             },
             errors: {
                 422: `Validation Error`,
@@ -77,17 +80,20 @@ export class OauthService {
      * Github Callback
      * Handle GitHub OAuth2 callback. Redirects to frontend with a short-lived authorization code.
      * @param code Authorization code from GitHub
+     * @param state CSRF state token
      * @returns any Successful Response
      * @throws ApiError
      */
     public static githubCallback(
         code: string,
+        state: string,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/auth/github/callback',
             query: {
                 'code': code,
+                'state': state,
             },
             errors: {
                 422: `Validation Error`,

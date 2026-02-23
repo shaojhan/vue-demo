@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { UserService, ApiError } from '@/api'
 import type { CurrentUserResponse } from '@/api'
 import {
-  NButton, NCard, NAvatar, NTag, NSpin, NSpace, NAlert,
+  NButton, NCard, NTag, NSpin, NSpace, NAlert,
   NDescriptions, NDescriptionsItem
 } from 'naive-ui'
 import { useLogout } from '@/composables/useLogout'
@@ -23,21 +23,32 @@ const isLoading = ref(true)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const uploadError = ref('')
+const uploadSuccess = ref(false)
+const avatarCacheKey = ref(Date.now())
 
-// 計算完整頭像 URL
+// 從各種格式的 avatar 值中提取純檔名
+const getAvatarFilename = (avatar: string): string | null => {
+  if (avatar.startsWith('/api/users/avatar/')) {
+    return avatar.slice('/api/users/avatar/'.length) || null
+  }
+  // MinIO 直連 URL 或其他路徑：取最後一段
+  return avatar.split('/').pop() || null
+}
+
+// 計算完整頭像 URL（統一走 UserService.getAvatar 的端點，附加 cache-busting）
 const avatarUrl = computed(() => {
   const avatar = currentUser.value?.profile?.avatar
   if (!avatar) return null
-  if (avatar.startsWith('http')) {
+
+  // 外部 URL（如 OAuth 頭像）：直接使用
+  if (avatar.startsWith('http') && !avatar.includes('localhost:9000/')) {
     return avatar
   }
-  if (avatar.startsWith('/uploads/')) {
-    return `/api${avatar}`
-  }
-  if (avatar.startsWith('/')) {
-    return avatar
-  }
-  return `/api/${avatar}`
+
+  const filename = getAvatarFilename(avatar)
+  if (!filename) return null
+
+  return `/api/users/avatar/${filename}?t=${avatarCacheKey.value}`
 })
 
 const roleLabel: Record<string, string> = {
@@ -81,25 +92,33 @@ const handleAvatarChange = async (event: Event) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
     uploadError.value = '不支援的檔案格式，請上傳 jpg, png, gif 或 webp 格式'
+    uploadSuccess.value = false
     return
   }
 
   if (file.size > 5 * 1024 * 1024) {
     uploadError.value = '檔案大小超過 5MB 限制'
+    uploadSuccess.value = false
     return
   }
 
   isUploading.value = true
   uploadError.value = ''
+  uploadSuccess.value = false
 
   try {
     await UserService.uploadAvatar({ file })
+    avatarCacheKey.value = Date.now()
     await fetchUser()
+    uploadSuccess.value = true
   } catch (error) {
     if (error instanceof ApiError) {
-      uploadError.value = '上傳失敗，請稍後再試'
+      const detail = typeof error.body?.detail === 'string' ? error.body.detail : null
+      uploadError.value = detail
+        ? `上傳失敗：${detail}`
+        : `上傳失敗（錯誤 ${error.status}），請稍後再試`
     } else {
-      uploadError.value = '網路連線錯誤'
+      uploadError.value = '網路連線錯誤，請確認連線狀態'
     }
   } finally {
     isUploading.value = false
@@ -117,14 +136,10 @@ const handleAvatarChange = async (event: Event) => {
         <div class="avatar-wrapper">
           <div class="avatar-container" :class="{ clickable: !isUploading }" @click="triggerAvatarUpload">
             <NSpin :show="isUploading" size="small">
-              <NAvatar
-                :size="100"
-                :src="avatarUrl || undefined"
-                round
-                :style="{ cursor: isUploading ? 'default' : 'pointer', fontSize: '40px' }"
-              >
-                {{ (currentUser?.profile?.name || currentUser?.uid || '?').charAt(0).toUpperCase() }}
-              </NAvatar>
+              <div class="avatar-circle" :style="{ cursor: isUploading ? 'default' : 'pointer' }">
+                <img v-if="avatarUrl" :key="avatarUrl" :src="avatarUrl" alt="" />
+                <span v-else>{{ (currentUser?.profile?.name || currentUser?.uid || '?').charAt(0).toUpperCase() }}</span>
+              </div>
             </NSpin>
           </div>
           <input
@@ -134,7 +149,10 @@ const handleAvatarChange = async (event: Event) => {
             style="display: none;"
             @change="handleAvatarChange"
           />
-          <NAlert v-if="uploadError" type="error" :bordered="false" style="margin-top: 8px;">
+          <NAlert v-if="uploadSuccess" type="success" :bordered="false" style="margin-top: 8px;">
+            頭像已更新成功
+          </NAlert>
+          <NAlert v-else-if="uploadError" type="error" :bordered="false" style="margin-top: 8px;">
             {{ uploadError }}
           </NAlert>
         </div>
@@ -220,6 +238,27 @@ const handleAvatarChange = async (event: Event) => {
 
 .avatar-container.clickable {
   cursor: pointer;
+}
+
+.avatar-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #e5e7eb;
+  color: #374151;
+  font-size: 40px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .welcome-section h1 {

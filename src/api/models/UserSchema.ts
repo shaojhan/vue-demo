@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { UserRole } from './UserRole';
 export type UserSchema = {
     created_at?: string;
     updated_at?: (string | null);
@@ -27,6 +26,5 @@ export type UserSchema = {
      * 自我介紹
      */
     description: string;
-    role: UserRole;
 };
 

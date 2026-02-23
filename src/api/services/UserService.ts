@@ -203,7 +203,7 @@ export class UserService {
     }
     /**
      * Update Password
-     * Update user password.
+     * Update user password. Users can only update their own password.
      * @param requestBody
      * @returns any Successful Response
      * @throws ApiError
@@ -223,7 +223,7 @@ export class UserService {
     }
     /**
      * Update User Profile
-     * Update user profile.
+     * Update user profile. Users can only update their own profile.
      * @param requestBody
      * @returns any Successful Response
      * @throws ApiError
@@ -236,6 +236,27 @@ export class UserService {
             url: '/users/profile/update',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Avatar
+     * Stream an avatar image directly from MinIO storage (no auth required).
+     * @param filename
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getAvatar(
+        filename: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/users/avatar/{filename}',
+            path: {
+                'filename': filename,
+            },
             errors: {
                 422: `Validation Error`,
             },
