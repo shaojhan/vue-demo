@@ -515,7 +515,7 @@ onMounted(() => {
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   margin-top: 4px;

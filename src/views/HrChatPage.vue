@@ -342,7 +342,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 20px;
-  background: white;
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-strong);
   flex-shrink: 0;
   z-index: 10;
@@ -382,7 +382,7 @@ onMounted(() => {
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background: white;
+  background: var(--color-surface);
   border-right: 1px solid var(--color-border-strong);
   display: flex;
   flex-direction: column;
@@ -506,7 +506,7 @@ onMounted(() => {
 
 .example-chip {
   padding: 8px 16px;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: 20px;
   font-size: 13px;
@@ -553,7 +553,7 @@ onMounted(() => {
 }
 
 .message.assistant .message-bubble {
-  background: white;
+  background: var(--color-surface);
   color: var(--color-foreground);
   border: 1px solid var(--color-border-strong);
   border-bottom-left-radius: 4px;
@@ -621,7 +621,7 @@ onMounted(() => {
 /* 輸入區域 */
 .input-area {
   padding: 16px 24px;
-  background: white;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border-strong);
   flex-shrink: 0;
 }

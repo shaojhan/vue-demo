@@ -668,7 +668,7 @@ onMounted(() => {
   right: 28px;
   width: 400px;
   height: 520px;
-  background: white;
+  background: var(--color-surface);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   display: flex;
