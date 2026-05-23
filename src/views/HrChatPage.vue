@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { HrChatService } from '@/api'
 import type { ConversationListItem, MessageItem, ActionTakenItem } from '@/api'
 import {
-  NButton, NInput, NSpin, NSpace, NTag, useDialog
+  NButton, NInput, NSpin, NTag, useDialog
 } from 'naive-ui'
-import { useLogout } from '@/composables/useLogout'
 
-const router = useRouter()
 const dialog = useDialog()
-const { logout: handleLogout } = useLogout()
 
 // 對話列表
 const conversations = ref<ConversationListItem[]>([])
@@ -174,38 +170,14 @@ onMounted(() => {
 
 <template>
   <div class="chat-page">
-    <!-- 頂部導航 -->
-    <nav class="top-nav">
-      <div class="nav-left">
-        <NButton class="sidebar-toggle" text @click="showSidebar = !showSidebar">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <rect y="3" width="20" height="2" rx="1" />
-            <rect y="9" width="20" height="2" rx="1" />
-            <rect y="15" width="20" height="2" rx="1" />
-          </svg>
-        </NButton>
-        <div class="nav-brand">
-          <svg viewBox="0 0 48 48" fill="none" class="nav-logo">
-            <rect width="48" height="48" rx="12" fill="url(#hr-grad)"/>
-            <path d="M24 12C18 12 14 16 14 22C14 26 16 29 20 31L20 36L24 34L28 36L28 31C32 29 34 26 34 22C34 16 30 12 24 12Z" stroke="white" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-            <circle cx="20" cy="22" r="2" fill="white"/>
-            <circle cx="28" cy="22" r="2" fill="white"/>
-            <defs>
-              <linearGradient id="hr-grad" x1="0" y1="0" x2="48" y2="48">
-                <stop stop-color="var(--color-info)"/>
-                <stop offset="1" stop-color="var(--color-primary)"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span>HR 審核助理</span>
-        </div>
-      </div>
-      <NSpace>
-        <NButton size="small" @click="router.push('/approvals')">簽核管理</NButton>
-        <NButton size="small" @click="router.push('/user')">個人頁面</NButton>
-        <NButton size="small" @click="handleLogout">登出</NButton>
-      </NSpace>
-    </nav>
+    <!-- 行動版開啟對話列表 -->
+    <NButton class="sidebar-toggle" text aria-label="切換對話列表" @click="showSidebar = !showSidebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <rect y="3" width="20" height="2" rx="1" />
+        <rect y="9" width="20" height="2" rx="1" />
+        <rect y="15" width="20" height="2" rx="1" />
+      </svg>
+    </NButton>
 
     <div class="chat-body">
       <!-- 左側 Sidebar -->
@@ -330,46 +302,24 @@ onMounted(() => {
 
 <style scoped>
 .chat-page {
-  height: 100vh;
+  /* Fill the AppShell content area (viewport minus topbar and content padding) */
+  height: calc(100vh - var(--topbar-height) - 2 * var(--space-5));
   display: flex;
   flex-direction: column;
-  background: var(--color-background);
-}
-
-/* 頂部導航 */
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-strong);
-  flex-shrink: 0;
-  z-index: 10;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
 }
 
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
+/* 行動版浮動切換鈕 (桌機隱藏，AppShell 已提供頂欄) */
 .sidebar-toggle {
   display: none;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-foreground);
-}
-
-.nav-logo {
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 20;
 }
 
 /* 主體 */
