@@ -14,12 +14,14 @@ import {
   type MenuOption
 } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { useLogout } from '@/composables/useLogout'
 import { icons } from '@/theme/icons'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const { logout } = useLogout()
 
 const collapsed = ref(false)
@@ -178,12 +180,23 @@ const roleLabel = computed(() =>
       <NLayoutHeader bordered class="topbar">
         <h1 class="page-title">{{ pageTitle }}</h1>
         <div class="topbar-actions">
+          <NButton
+            text
+            class="theme-toggle"
+            :aria-label="themeStore.mode === 'dark' ? '切換為淺色模式' : '切換為深色模式'"
+            @click="themeStore.toggle()"
+          >
+            <NIcon :size="20">
+              <component :is="themeStore.mode === 'dark' ? icons.sun : icons.moon" />
+            </NIcon>
+          </NButton>
+
           <NDropdown
             trigger="click"
             :options="userOptions"
             @select="handleUserAction"
           >
-            <NButton text class="user-trigger">
+            <NButton text class="user-trigger" aria-label="使用者選單">
               <NAvatar round size="small" class="user-avatar">
                 {{ userLabel.charAt(0).toUpperCase() }}
               </NAvatar>
