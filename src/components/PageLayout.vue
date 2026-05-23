@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import TopNav from '@/components/TopNav.vue'
-
+/**
+ * Page content container. Navigation chrome (sidebar + topbar) is now provided
+ * by AppShell at the route layout level, so this component only constrains and
+ * holds page content. `maxWidth` lets form-oriented pages stay narrow; data-dense
+ * pages omit it to use the full content width.
+ *
+ * `badge` and the `#nav` slot are retained for backward compatibility but no
+ * longer rendered (the sidebar/topbar replaces them) — cleaned up per page in
+ * later phases.
+ */
 defineProps<{
   badge?: string
   maxWidth?: string
@@ -8,32 +16,14 @@ defineProps<{
 </script>
 
 <template>
-  <div class="page-layout">
-    <TopNav :badge="badge">
-      <slot name="nav" />
-    </TopNav>
-
-    <main class="page-layout-content" :style="maxWidth ? { maxWidth } : undefined">
-      <slot />
-    </main>
+  <div class="page-layout" :style="maxWidth ? { maxWidth } : undefined">
+    <slot />
   </div>
 </template>
 
 <style scoped>
 .page-layout {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.page-layout-content {
-  max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
-  padding: 48px 24px;
-}
-
-@media (max-width: 640px) {
-  .page-layout-content {
-    padding: 32px 16px;
-  }
 }
 </style>

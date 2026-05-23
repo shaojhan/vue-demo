@@ -41,7 +41,7 @@ const handleLogin = async () => {
     })
 
     authStore.login(response.user, response.access_token, response.expires_in)
-    router.push('/user')
+    router.push('/dashboard')
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 403) {
