@@ -103,8 +103,8 @@ const handleResendVerification = async () => {
             <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1 class="brand-title">Vue Demo</h1>
-        <p class="brand-subtitle">探索現代化的 Web 開發體驗</p>
+        <h1 class="brand-title">MES 平台</h1>
+        <p class="brand-subtitle">製造執行系統 · 串接 ERP / WMS / CRM</p>
 
         <div class="features-list">
           <div class="feature-item">
@@ -114,8 +114,8 @@ const handleResendVerification = async () => {
               </svg>
             </div>
             <div class="feature-text">
-              <span class="feature-title">極速體驗</span>
-              <span class="feature-desc">基於 Vite 的閃電構建</span>
+              <span class="feature-title">系統整合</span>
+              <span class="feature-desc">串接 ERP / WMS / CRM</span>
             </div>
           </div>
           <div class="feature-item">
@@ -125,8 +125,8 @@ const handleResendVerification = async () => {
               </svg>
             </div>
             <div class="feature-text">
-              <span class="feature-title">安全可靠</span>
-              <span class="feature-desc">TypeScript 類型安全</span>
+              <span class="feature-title">即時監控</span>
+              <span class="feature-desc">製造流程即時掌握</span>
             </div>
           </div>
           <div class="feature-item">
@@ -137,15 +137,15 @@ const handleResendVerification = async () => {
               </svg>
             </div>
             <div class="feature-text">
-              <span class="feature-title">全球部署</span>
-              <span class="feature-desc">隨處可用的雲端服務</span>
+              <span class="feature-title">流程簽核</span>
+              <span class="feature-desc">簽核與排程一站管理</span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="brand-footer">
-        <p>&copy; 2024 Vue Demo. All rights reserved.</p>
+        <p>&copy; 2026 MES 平台. All rights reserved.</p>
       </div>
     </div>
 
@@ -266,7 +266,7 @@ const handleResendVerification = async () => {
 /* 左側品牌區 */
 .brand-section {
   flex: 1;
-  background: linear-gradient(160deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
+  background: linear-gradient(160deg, var(--color-info) 0%, var(--color-primary) 50%, var(--color-secondary) 100%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -380,7 +380,7 @@ const handleResendVerification = async () => {
   align-items: center;
   justify-content: center;
   padding: 48px;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .login-container {
@@ -395,13 +395,13 @@ const handleResendVerification = async () => {
 .login-header h2 {
   font-size: 32px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .login-header p {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
@@ -420,7 +420,7 @@ const handleResendVerification = async () => {
 .form-item label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
 }
 
 .label-row {
@@ -431,7 +431,7 @@ const handleResendVerification = async () => {
 
 .forgot-link {
   font-size: 13px;
-  color: #6366f1;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -447,12 +447,12 @@ const handleResendVerification = async () => {
 
 .login-footer p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
 .login-footer a {
-  color: #6366f1;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 600;
 }

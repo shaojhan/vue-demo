@@ -24,7 +24,7 @@ defineProps<{
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
   margin-bottom: 8px;
 }
 </style>

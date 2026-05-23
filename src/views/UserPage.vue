@@ -245,8 +245,8 @@ const handleAvatarChange = async (event: Event) => {
   height: 100px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #e5e7eb;
-  color: #374151;
+  background-color: var(--color-border-strong);
+  color: var(--color-foreground-secondary);
   font-size: 40px;
   font-weight: 600;
   display: flex;
@@ -264,13 +264,13 @@ const handleAvatarChange = async (event: Event) => {
 .welcome-section h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .welcome-sub {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 

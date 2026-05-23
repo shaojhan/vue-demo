@@ -132,7 +132,7 @@ const handleSubmit = () => submit(() => {
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .container {
@@ -148,13 +148,13 @@ const handleSubmit = () => submit(() => {
 .header h2 {
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .header p {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
   line-height: 1.6;
 }
@@ -174,7 +174,7 @@ const handleSubmit = () => submit(() => {
 .form-item label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
 }
 
 @media (max-width: 480px) {
