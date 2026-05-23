@@ -122,6 +122,7 @@ export { ApprovalService } from './services/ApprovalService';
 export { ChatService } from './services/ChatService';
 export { DefaultService } from './services/DefaultService';
 export { EmployeeService } from './services/EmployeeService';
+export { HrChatService } from './services/HrChatService';
 export { KafkaService } from './services/KafkaService';
 export { MessageService } from './services/MessageService';
 export { MqttService } from './services/MqttService';
