@@ -130,7 +130,7 @@ const selectCalendar = async (calendarId: string) => {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .header {
@@ -152,13 +152,13 @@ const selectCalendar = async (calendarId: string) => {
 .header h1 {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .header p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
@@ -180,19 +180,19 @@ const selectCalendar = async (calendarId: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border-strong);
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .calendar-item:hover {
-  border-color: #10b981;
+  border-color: var(--color-success);
   background: #f0fdf4;
 }
 
 .calendar-item.selected {
-  border-color: #10b981;
+  border-color: var(--color-success);
   background: #ecfdf5;
 }
 
@@ -209,7 +209,7 @@ const selectCalendar = async (calendarId: string) => {
 .calendar-name {
   font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-foreground);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -217,7 +217,7 @@ const selectCalendar = async (calendarId: string) => {
 
 .calendar-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;

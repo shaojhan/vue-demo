@@ -237,8 +237,8 @@ const commonColumnDefs: ColDef<ApprovalListItem>[] = [
     width: 110,
     cellRenderer: (params: { value: string }) => {
       const label = typeLabels[params.value] || params.value
-      const bg = params.value === 'LEAVE' ? '#dbeafe' : '#fef3c7'
-      const color = params.value === 'LEAVE' ? '#1d4ed8' : '#92400e'
+      const bg = params.value === 'LEAVE' ? 'var(--color-border)' : '#fef3c7'
+      const color = params.value === 'LEAVE' ? 'var(--color-primary-hover)' : '#92400e'
       return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${label}</span>`
     }
   },
@@ -250,11 +250,11 @@ const commonColumnDefs: ColDef<ApprovalListItem>[] = [
       const label = statusLabels[params.value] || params.value
       const colorMap: Record<string, { bg: string; color: string }> = {
         PENDING: { bg: '#fef9c3', color: '#854d0e' },
-        APPROVED: { bg: '#dcfce7', color: '#16a34a' },
-        REJECTED: { bg: '#fef2f2', color: '#dc2626' },
-        CANCELLED: { bg: '#f1f5f9', color: '#64748b' }
+        APPROVED: { bg: '#dcfce7', color: 'var(--color-success)' },
+        REJECTED: { bg: '#fef2f2', color: 'var(--color-destructive)' },
+        CANCELLED: { bg: 'var(--color-muted)', color: 'var(--color-foreground-muted)' }
       }
-      const { bg, color } = colorMap[params.value] || { bg: '#f1f5f9', color: '#64748b' }
+      const { bg, color } = colorMap[params.value] || { bg: 'var(--color-muted)', color: 'var(--color-foreground-muted)' }
       return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${label}</span>`
     }
   },
@@ -367,7 +367,7 @@ onMounted(() => {
       <NTabPane name="my-requests" tab="我的申請">
         <NCard size="small" style="margin-bottom: 16px;">
           <NSpace align="center">
-            <span style="font-size: 13px; color: #64748b;">狀態篩選：</span>
+            <span style="font-size: 13px; color: var(--color-foreground-muted);">狀態篩選：</span>
             <NSelect
               :value="myStatusFilter || ''"
               :options="statusFilterOptions"
@@ -476,7 +476,7 @@ onMounted(() => {
           <NTag :type="(statusColors[currentDetail.status] as any)" size="medium">
             {{ statusLabels[currentDetail.status] || currentDetail.status }}
           </NTag>
-          <span style="margin-left: 12px; font-size: 13px; color: #64748b;">
+          <span style="margin-left: 12px; font-size: 13px; color: var(--color-foreground-muted);">
             建立時間：{{ formatDate(currentDetail.created_at) }}
           </span>
         </div>
@@ -493,7 +493,7 @@ onMounted(() => {
         </NDescriptions>
 
         <!-- 審批鏈 -->
-        <h4 style="margin: 0 0 12px; font-size: 14px; color: #374151;">審批鏈</h4>
+        <h4 style="margin: 0 0 12px; font-size: 14px; color: var(--color-foreground-secondary);">審批鏈</h4>
         <div class="approval-steps">
           <div v-for="step in currentDetail.steps" :key="step.step_order" class="approval-step">
             <div class="step-indicator" :class="step.status.toLowerCase()">
@@ -572,7 +572,7 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-muted);
 }
 
 .approval-step:last-child {
@@ -589,18 +589,18 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-muted);
+  color: var(--color-foreground-muted);
 }
 
 .step-indicator.approved {
   background: #dcfce7;
-  color: #16a34a;
+  color: var(--color-success);
 }
 
 .step-indicator.rejected {
   background: #fef2f2;
-  color: #dc2626;
+  color: var(--color-destructive);
 }
 
 .step-indicator.pending {
@@ -623,18 +623,18 @@ onMounted(() => {
 .step-approver {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
 }
 
 .step-comment {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin-top: 4px;
 }
 
 .step-time {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
   margin-top: 2px;
 }
 

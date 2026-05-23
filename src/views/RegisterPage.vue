@@ -63,8 +63,8 @@ const handleRegister = () => submit(() => {
             <path d="M24 26L14 20M24 26V38M24 26L34 20" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1 class="brand-title">Vue Demo</h1>
-        <p class="brand-subtitle">立即加入，開啟全新體驗</p>
+        <h1 class="brand-title">MES 平台</h1>
+        <p class="brand-subtitle">立即加入，開啟智慧製造管理</p>
 
         <div class="features-list">
           <div class="feature-item">
@@ -106,7 +106,7 @@ const handleRegister = () => submit(() => {
       </div>
 
       <div class="brand-footer">
-        <p>&copy; 2024 Vue Demo. All rights reserved.</p>
+        <p>&copy; 2026 MES 平台. All rights reserved.</p>
       </div>
     </div>
 
@@ -214,7 +214,7 @@ const handleRegister = () => submit(() => {
 /* 左側品牌區 */
 .brand-section {
   flex: 1;
-  background: linear-gradient(160deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
+  background: linear-gradient(160deg, var(--color-info) 0%, var(--color-primary) 50%, var(--color-secondary) 100%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -328,7 +328,7 @@ const handleRegister = () => submit(() => {
   align-items: center;
   justify-content: center;
   padding: 48px;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .register-container {
@@ -343,13 +343,13 @@ const handleRegister = () => submit(() => {
 .register-header h2 {
   font-size: 32px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .register-header p {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
@@ -368,12 +368,12 @@ const handleRegister = () => submit(() => {
 .form-item label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
 }
 
 .optional {
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
   font-size: 13px;
 }
 
@@ -384,12 +384,12 @@ const handleRegister = () => submit(() => {
 
 .register-footer p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
 .register-footer a {
-  color: #6366f1;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 600;
 }

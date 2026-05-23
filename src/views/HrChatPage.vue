@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
-import { ChatService } from '@/api'
+import { HrChatService } from '@/api'
 import type { ConversationListItem, MessageItem, ActionTakenItem } from '@/api'
 import {
   NButton, NInput, NSpin, NTag, useDialog
@@ -41,7 +41,7 @@ const scrollToBottom = async () => {
 const fetchConversations = async () => {
   conversationsLoading.value = true
   try {
-    const res = await ChatService.listConversationsChatConversationsGet(1, 50)
+    const res = await HrChatService.listConversationsHrChatConversationsGet(1, 50)
     conversations.value = res.items
   } catch {
     // ignore
@@ -57,7 +57,7 @@ const loadConversation = async (id: string) => {
   lastActions.value = []
   showSidebar.value = false
   try {
-    const res = await ChatService.getConversationChatConversationsConversationIdGet(id)
+    const res = await HrChatService.getConversationHrChatConversationsConversationIdGet(id)
     messages.value = res.messages
     scrollToBottom()
   } catch {
@@ -89,7 +89,7 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const res = await ChatService.sendMessageChatPost({
+    const res = await HrChatService.sendMessageHrChatPost({
       message: msg,
       conversation_id: currentConversationId.value
     })
@@ -129,7 +129,7 @@ const handleDelete = (conv: ConversationListItem) => {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await ChatService.deleteConversationChatConversationsConversationIdDelete(conv.id)
+        await HrChatService.deleteConversationHrChatConversationsConversationIdDelete(conv.id)
         if (currentConversationId.value === conv.id) {
           startNewConversation()
         }
@@ -156,10 +156,11 @@ const formatTime = (dateStr?: string | null) => {
 
 // 工具名稱對照
 const toolLabels: Record<string, string> = {
-  create_schedule: '建立排程',
-  update_schedule: '更新排程',
-  delete_schedule: '刪除排程',
-  list_schedules: '查詢排程'
+  approve_request: '批准申請',
+  reject_request: '拒絕申請',
+  list_approvals: '查詢簽核',
+  get_approval_detail: '查看詳情',
+  list_pending: '查詢待審',
 }
 
 onMounted(() => {
@@ -226,17 +227,18 @@ onMounted(() => {
             <div v-if="messages.length === 0" class="welcome-screen">
               <div class="welcome-icon">
                 <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                  <circle cx="24" cy="24" r="22" stroke="var(--color-primary)" stroke-width="2" fill="var(--color-muted)"/>
-                  <path d="M16 22a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm12 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z" fill="var(--color-primary)"/>
-                  <path d="M16 30c0 0 2 4 8 4s8-4 8-4" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="24" cy="24" r="22" stroke="var(--color-info)" stroke-width="2" fill="var(--color-muted)"/>
+                  <path d="M24 14C19 14 16 17.5 16 21.5C16 24.5 17.5 27 20 28.5L20 32L24 30.5L28 32L28 28.5C30.5 27 32 24.5 32 21.5C32 17.5 29 14 24 14Z" stroke="var(--color-info)" stroke-width="2" stroke-linejoin="round" fill="none"/>
+                  <circle cx="21" cy="22" r="1.5" fill="var(--color-info)"/>
+                  <circle cx="27" cy="22" r="1.5" fill="var(--color-info)"/>
                 </svg>
               </div>
-              <h2>AI 排程助理</h2>
-              <p>你可以用自然語言請我幫你管理排程</p>
+              <h2>HR 審核助理</h2>
+              <p>你可以用自然語言請我協助處理簽核與審核事務</p>
               <div class="welcome-examples">
-                <div class="example-chip" @click="inputMessage = '幫我明天下午2點到3點安排一個會議'">幫我安排一個會議</div>
-                <div class="example-chip" @click="inputMessage = '查看我這週的排程'">查看本週排程</div>
-                <div class="example-chip" @click="inputMessage = '取消明天的會議'">取消明天的會議</div>
+                <div class="example-chip" @click="inputMessage = '幫我列出目前待審核的申請'">查詢待審核的申請</div>
+                <div class="example-chip" @click="inputMessage = '幫我批准最新的請假申請'">批准請假申請</div>
+                <div class="example-chip" @click="inputMessage = '拒絕這筆費用申請，原因是金額超出預算'">拒絕費用申請</div>
               </div>
             </div>
 
@@ -464,8 +466,8 @@ onMounted(() => {
 }
 
 .example-chip:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-info);
+  color: var(--color-info);
   background: var(--color-muted);
 }
 
@@ -495,7 +497,7 @@ onMounted(() => {
 }
 
 .message.user .message-bubble {
-  background: var(--color-primary);
+  background: var(--color-info);
   color: white;
   border-bottom-right-radius: 4px;
 }

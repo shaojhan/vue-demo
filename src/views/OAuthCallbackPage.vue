@@ -35,7 +35,7 @@ onMounted(async () => {
         tokenRes.access_token,
         tokenRes.expires_in
       )
-      router.replace('/user')
+      router.replace('/dashboard')
     } catch (error) {
       if (error instanceof ApiError) {
         errorMessage.value = '第三方登入失敗，請稍後再試'

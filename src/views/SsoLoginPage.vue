@@ -123,7 +123,7 @@ const protocolLabel = (protocol: string) => {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .sso-header {
@@ -134,13 +134,13 @@ const protocolLabel = (protocol: string) => {
 .sso-header h1 {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .sso-header p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0;
 }
 
@@ -161,20 +161,20 @@ const protocolLabel = (protocol: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-border-strong);
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .provider-btn:hover {
-  border-color: #6366f1;
-  background: #f5f3ff;
+  border-color: var(--color-primary);
+  background: var(--color-muted);
 }
 
 .provider-btn.connecting {
-  border-color: #6366f1;
-  background: #eef2ff;
+  border-color: var(--color-primary);
+  background: var(--color-muted);
   pointer-events: none;
 }
 
@@ -187,7 +187,7 @@ const protocolLabel = (protocol: string) => {
 .provider-name {
   font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .sso-footer {

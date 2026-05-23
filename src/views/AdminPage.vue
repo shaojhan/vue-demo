@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, h, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { EmployeeService, UserService, ApiError } from '@/api'
 import { Department } from '@/api'
 import type { AssignEmployeeResponse, UserListItem, EmployeeListItem, CsvUploadResponse } from '@/api'
@@ -16,7 +15,6 @@ import PageHeader from '@/components/PageHeader.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import FormField from '@/components/FormField.vue'
 
-const router = useRouter()
 const activeTab = ref('users')
 
 // 指派員工
@@ -99,7 +97,7 @@ const userColumns: DataTableColumns<UserListItem> = [
   },
   {
     title: 'ID', key: 'id', width: 100,
-    render: (row) => h('span', { style: 'font-family: monospace; font-size: 13px; color: #64748b;' }, row.id.slice(0, 8) + '...')
+    render: (row) => h('span', { style: 'font-family: monospace; font-size: 13px; color: var(--color-foreground-muted);' }, row.id.slice(0, 8) + '...')
   }
 ]
 
@@ -219,11 +217,7 @@ const csvTaskStatusLabel: Record<string, string> = {
 </script>
 
 <template>
-  <PageLayout badge="管理後台" max-width="900px">
-    <template #nav>
-      <NButton @click="router.push('/mqtt')">MQTT 管理</NButton>
-      <NButton @click="router.push('/kafka')">Kafka 管理</NButton>
-    </template>
+  <PageLayout>
 
     <PageHeader title="管理員後台" description="管理會員與員工資料" />
 
@@ -233,7 +227,7 @@ const csvTaskStatusLabel: Record<string, string> = {
         <NCard style="margin-top: 16px;">
           <template #header>
             會員列表
-            <span style="font-size: 14px; font-weight: 400; color: #64748b; margin-left: 8px;">共 {{ userTotal }} 位會員</span>
+            <span style="font-size: 14px; font-weight: 400; color: var(--color-foreground-muted); margin-left: 8px;">共 {{ userTotal }} 位會員</span>
           </template>
 
           <NSpin :show="userLoading">
@@ -255,7 +249,7 @@ const csvTaskStatusLabel: Record<string, string> = {
         <NCard style="margin-top: 16px;">
           <template #header>
             員工列表
-            <span style="font-size: 14px; font-weight: 400; color: #64748b; margin-left: 8px;">共 {{ employeeTotal }} 位員工</span>
+            <span style="font-size: 14px; font-weight: 400; color: var(--color-foreground-muted); margin-left: 8px;">共 {{ employeeTotal }} 位員工</span>
           </template>
 
           <NSpin :show="employeeLoading">
@@ -277,7 +271,7 @@ const csvTaskStatusLabel: Record<string, string> = {
         <!-- 指派表單 -->
         <NCard title="指派員工" style="margin-top: 16px; margin-bottom: 24px;">
           <template #header-extra>
-            <span style="font-size: 14px; color: #64748b;">將現有會員帳號指派為員工身份</span>
+            <span style="font-size: 14px; color: var(--color-foreground-muted);">將現有會員帳號指派為員工身份</span>
           </template>
 
           <form @submit.prevent="handleSubmit">
@@ -324,7 +318,7 @@ const csvTaskStatusLabel: Record<string, string> = {
         <!-- CSV 批次上傳 -->
         <NCard title="CSV 批次建立員工">
           <template #header-extra>
-            <span style="font-size: 14px; color: #64748b;">上傳 CSV 檔案批次建立員工帳號</span>
+            <span style="font-size: 14px; color: var(--color-foreground-muted);">上傳 CSV 檔案批次建立員工帳號</span>
           </template>
 
           <div class="csv-format-hint">
@@ -454,8 +448,8 @@ const csvTaskStatusLabel: Record<string, string> = {
 
 /* CSV 上傳 */
 .csv-format-hint {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border-strong);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -464,14 +458,14 @@ const csvTaskStatusLabel: Record<string, string> = {
 .hint-title {
   font-size: 14px;
   font-weight: 600;
-  color: #475569;
+  color: var(--color-foreground-secondary);
   margin-bottom: 12px;
 }
 
 .hint-code {
   display: block;
-  background: #1e293b;
-  color: #e2e8f0;
+  background: var(--color-foreground);
+  color: var(--color-border-strong);
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 13px;
@@ -483,7 +477,7 @@ const csvTaskStatusLabel: Record<string, string> = {
 .hint-note {
   margin-top: 10px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 .file-input-wrap {
@@ -503,32 +497,32 @@ const csvTaskStatusLabel: Record<string, string> = {
   justify-content: center;
   gap: 12px;
   padding: 24px;
-  border: 2px dashed #e2e8f0;
+  border: 2px dashed var(--color-border-strong);
   border-radius: 12px;
-  background: #fafafa;
-  color: #64748b;
+  background: var(--color-background);
+  color: var(--color-foreground-muted);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .file-label:hover {
-  border-color: #10b981;
+  border-color: var(--color-success);
   background: #ecfdf5;
-  color: #10b981;
+  color: var(--color-success);
 }
 
 /* CSV 結果 */
 .upload-result {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border-strong);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .result-summary {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .result-stat {
@@ -537,7 +531,7 @@ const csvTaskStatusLabel: Record<string, string> = {
   flex-direction: column;
   align-items: center;
   padding: 16px;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid var(--color-border-strong);
 }
 
 .result-stat:last-child {
@@ -551,13 +545,13 @@ const csvTaskStatusLabel: Record<string, string> = {
 
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin-top: 4px;
 }
 
-.result-stat.total .stat-value { color: #6366f1; }
-.result-stat.success .stat-value { color: #10b981; }
-.result-stat.failure .stat-value { color: #ef4444; }
+.result-stat.total .stat-value { color: var(--color-primary); }
+.result-stat.success .stat-value { color: var(--color-success); }
+.result-stat.failure .stat-value { color: var(--color-destructive); }
 
 .result-details {
   max-height: 240px;
@@ -578,29 +572,29 @@ const csvTaskStatusLabel: Record<string, string> = {
 }
 
 .result-item:hover {
-  background: #f1f5f9;
+  background: var(--color-muted);
 }
 
 .item-row {
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
   min-width: 60px;
 }
 
 .item-idno {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-foreground);
   min-width: 80px;
 }
 
 .item-message {
   flex: 1;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 /* 任務進度 */
 .task-progress {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border-strong);
   border-radius: 12px;
   padding: 16px;
 }
@@ -621,7 +615,7 @@ const csvTaskStatusLabel: Record<string, string> = {
 .task-id {
   font-family: monospace;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
 }
 
 .task-progress-body {
@@ -632,7 +626,7 @@ const csvTaskStatusLabel: Record<string, string> = {
 
 .task-progress-text {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 .task-progress-detail {
@@ -640,12 +634,12 @@ const csvTaskStatusLabel: Record<string, string> = {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 .task-current-item {
   font-weight: 600;
-  color: #475569;
+  color: var(--color-foreground-secondary);
 }
 
 /* RWD */

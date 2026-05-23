@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
+import { themeQuartz, colorSchemeDark } from 'ag-grid-community'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
+import { useThemeStore } from '@/stores/theme'
 
 defineProps<{
   rowData: any[]
@@ -15,6 +16,48 @@ defineEmits<{
   'row-clicked': [event: RowClickedEvent]
 }>()
 
+const themeStore = useThemeStore()
+
+/**
+ * ag-grid v33+ uses the Theming API (JS theme objects), which overrides the
+ * legacy CSS-class themes — so the grid must be themed here, not via CSS.
+ * Params mirror the MES design tokens for light and dark (Data-Dense Dashboard).
+ */
+const baseParams = {
+  fontFamily: "'Fira Sans', system-ui, -apple-system, sans-serif",
+  fontSize: 14,
+  rowHeight: 38,
+  headerHeight: 40,
+  spacing: 6,
+  borderRadius: 8,
+  wrapperBorderRadius: 8,
+  headerFontWeight: 600
+}
+
+const lightTheme = themeQuartz.withParams({
+  ...baseParams,
+  backgroundColor: '#ffffff',
+  foregroundColor: '#0f172a',
+  headerBackgroundColor: '#e9eef6',
+  headerTextColor: '#0f172a',
+  borderColor: '#dbeafe',
+  rowHoverColor: '#f1f5f9',
+  oddRowBackgroundColor: '#ffffff'
+})
+
+const darkTheme = themeQuartz.withPart(colorSchemeDark).withParams({
+  ...baseParams,
+  backgroundColor: '#111a2e',
+  foregroundColor: '#e2e8f0',
+  headerBackgroundColor: '#1c2840',
+  headerTextColor: '#e2e8f0',
+  borderColor: '#1e293b',
+  rowHoverColor: '#16213a',
+  oddRowBackgroundColor: '#111a2e'
+})
+
+const gridTheme = computed(() => (themeStore.mode === 'dark' ? darkTheme : lightTheme))
+
 const baseDefaultColDef: ColDef = {
   sortable: true,
   resizable: true
@@ -23,8 +66,9 @@ const baseDefaultColDef: ColDef = {
 
 <template>
   <ag-grid-vue
-    class="ag-theme-quartz data-grid"
+    class="data-grid"
     :class="{ clickable }"
+    :theme="gridTheme"
     :rowData="rowData"
     :columnDefs="columnDefs"
     :defaultColDef="defaultColDef || baseDefaultColDef"
@@ -37,8 +81,11 @@ const baseDefaultColDef: ColDef = {
 <style scoped>
 .data-grid {
   width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
+}
+
+/* Tabular figures so numeric columns stay aligned */
+.data-grid :deep(.ag-cell) {
+  font-variant-numeric: tabular-nums;
 }
 
 .data-grid.clickable :deep(.ag-row) {

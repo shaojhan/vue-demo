@@ -16,8 +16,8 @@ const router = useRouter()
             <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1>歡迎來到 Vue Demo</h1>
-        <p>一個簡潔優雅的 Vue 3 示範專案</p>
+        <h1>歡迎使用 MES 平台</h1>
+        <p>製造執行系統 · 串接 ERP / WMS / CRM 的營運中樞</p>
       </div>
 
       <NSpace justify="center" :size="16" style="margin-bottom: 64px;">
@@ -36,8 +36,8 @@ const router = useRouter()
               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>快速</h3>
-          <p>基於 Vite 構建，享受極速開發體驗</p>
+          <h3>系統整合</h3>
+          <p>串接 ERP、WMS、CRM 等外部系統</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
@@ -46,8 +46,8 @@ const router = useRouter()
               <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <h3>現代</h3>
-          <p>使用 Vue 3 Composition API</p>
+          <h3>即時監控</h3>
+          <p>製造流程與事件即時掌握</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
@@ -55,8 +55,8 @@ const router = useRouter()
               <path d="M12 22S8 18 8 13V5L12 3L16 5V13C16 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h3>安全</h3>
-          <p>TypeScript 類型安全保障</p>
+          <h3>流程簽核</h3>
+          <p>內建簽核與排程管理</p>
         </div>
       </div>
     </div>
@@ -69,7 +69,7 @@ const router = useRouter()
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 50%, #1e40af 100%);
   padding: 40px 20px;
 }
 
@@ -85,13 +85,13 @@ const router = useRouter()
 .logo-icon {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 15px 40px rgba(30, 64, 175, 0.45);
 }
 
 .logo-icon svg {
@@ -137,7 +137,7 @@ const router = useRouter()
 .feature-icon {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(30, 64, 175, 0.3));
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -148,7 +148,7 @@ const router = useRouter()
 .feature-icon svg {
   width: 28px;
   height: 28px;
-  color: #a78bfa;
+  color: #93c5fd;
 }
 
 .feature-card h3 {

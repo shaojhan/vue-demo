@@ -1,0 +1,149 @@
+/**
+ * MES Platform — Design Tokens
+ * Style: Data-Dense Dashboard (ui-ux-pro-max)
+ * Single source of truth for color, spacing, typography, radius, shadow, z-index.
+ * Components must consume these tokens — never hardcode hex values.
+ *
+ * Dark mode tokens are pre-defined under [data-theme="dark"] but the toggle
+ * is not wired up yet (planned for a later phase).
+ */
+
+:root {
+  /* ---- Color: brand / semantic (light) ---- */
+  --color-primary: #1e40af;          /* industrial blue */
+  --color-primary-hover: #1d4ed8;
+  --color-primary-pressed: #1e3a8a;
+  --color-primary-suppl: #3b82f6;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #3b82f6;
+  --color-accent: #d97706;           /* amber CTA (WCAG-adjusted) */
+  --color-accent-hover: #b45309;
+  --color-on-accent: #ffffff;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-destructive: #dc2626;
+  --color-destructive-hover: #b91c1c;
+  --color-info: #3b82f6;
+
+  /* ---- Color: surfaces & text (light) ---- */
+  --color-background: #f8fafc;        /* app canvas */
+  --color-surface: #ffffff;           /* cards, panels */
+  --color-surface-raised: #ffffff;
+  --color-muted: #e9eef6;             /* subtle fills, table stripes */
+  --color-foreground: #0f172a;        /* primary text */
+  --color-foreground-secondary: #475569;
+  --color-foreground-muted: #64748b;
+  --color-border: #dbeafe;
+  --color-border-strong: #cbd5e1;
+  --color-ring: #1e40af;              /* focus ring */
+  --color-overlay: rgba(15, 23, 42, 0.5);
+
+  /* ---- Spacing: 4 / 8 scale ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Typography ---- */
+  --font-sans: 'Fira Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Radius ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* ---- Shadow / elevation ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  /* ---- Motion ---- */
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- Z-index scale ---- */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-sidebar: 20;
+  --z-topbar: 30;
+  --z-overlay: 40;
+  --z-modal: 100;
+  --z-toast: 1000;
+
+  /* ---- Layout ---- */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 56px;
+}
+
+/* ---- Dark mode (defined, toggle wired in a later phase) ---- */
+[data-theme='dark'] {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-primary-pressed: #93c5fd;
+  --color-primary-suppl: #1d4ed8;
+  --color-on-primary: #0b1220;
+
+  --color-secondary: #60a5fa;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #fbbf24;
+  --color-on-accent: #1c1206;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-destructive: #ef4444;
+  --color-destructive-hover: #f87171;
+  --color-info: #60a5fa;
+
+  --color-background: #0b1220;
+  --color-surface: #111a2e;
+  --color-surface-raised: #16213a;
+  --color-muted: #1c2840;
+  --color-foreground: #e2e8f0;
+  --color-foreground-secondary: #94a3b8;
+  --color-foreground-muted: #64748b;
+  --color-border: #1e293b;
+  --color-border-strong: #334155;
+  --color-ring: #60a5fa;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

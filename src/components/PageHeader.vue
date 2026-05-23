@@ -8,7 +8,7 @@ defineProps<{
 <template>
   <div class="page-header" :class="{ 'has-action': $slots.default }">
     <div>
-      <h1>{{ title }}</h1>
+      <h2>{{ title }}</h2>
       <p v-if="description">{{ description }}</p>
     </div>
     <slot />
@@ -27,16 +27,16 @@ defineProps<{
   margin-bottom: 24px;
 }
 
-.page-header h1 {
+.page-header h2 {
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .page-header p {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-secondary);
   margin: 0;
 }
 
@@ -47,7 +47,7 @@ defineProps<{
     gap: 16px;
   }
 
-  .page-header h1 {
+  .page-header h2 {
     font-size: 24px;
   }
 }

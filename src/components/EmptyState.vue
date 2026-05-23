@@ -14,7 +14,7 @@ defineProps<{
 .empty-state {
   text-align: center;
   padding: 60px 0;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
   font-size: 15px;
 }
 
