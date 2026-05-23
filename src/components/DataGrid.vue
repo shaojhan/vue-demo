@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
+import { themeQuartz, colorSchemeDark } from 'ag-grid-community'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { useThemeStore } from '@/stores/theme'
 
 defineProps<{
@@ -18,11 +17,46 @@ defineEmits<{
 }>()
 
 const themeStore = useThemeStore()
-// Quartz ships a light and a dark variant; pick by app theme so the grid's
-// baked-in surface/border defaults match, then tokens refine the rest.
-const themeClass = computed(() =>
-  themeStore.mode === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'
-)
+
+/**
+ * ag-grid v33+ uses the Theming API (JS theme objects), which overrides the
+ * legacy CSS-class themes — so the grid must be themed here, not via CSS.
+ * Params mirror the MES design tokens for light and dark (Data-Dense Dashboard).
+ */
+const baseParams = {
+  fontFamily: "'Fira Sans', system-ui, -apple-system, sans-serif",
+  fontSize: 14,
+  rowHeight: 38,
+  headerHeight: 40,
+  spacing: 6,
+  borderRadius: 8,
+  wrapperBorderRadius: 8,
+  headerFontWeight: 600
+}
+
+const lightTheme = themeQuartz.withParams({
+  ...baseParams,
+  backgroundColor: '#ffffff',
+  foregroundColor: '#0f172a',
+  headerBackgroundColor: '#e9eef6',
+  headerTextColor: '#0f172a',
+  borderColor: '#dbeafe',
+  rowHoverColor: '#f1f5f9',
+  oddRowBackgroundColor: '#ffffff'
+})
+
+const darkTheme = themeQuartz.withPart(colorSchemeDark).withParams({
+  ...baseParams,
+  backgroundColor: '#111a2e',
+  foregroundColor: '#e2e8f0',
+  headerBackgroundColor: '#1c2840',
+  headerTextColor: '#e2e8f0',
+  borderColor: '#1e293b',
+  rowHoverColor: '#16213a',
+  oddRowBackgroundColor: '#111a2e'
+})
+
+const gridTheme = computed(() => (themeStore.mode === 'dark' ? darkTheme : lightTheme))
 
 const baseDefaultColDef: ColDef = {
   sortable: true,
@@ -33,7 +67,8 @@ const baseDefaultColDef: ColDef = {
 <template>
   <ag-grid-vue
     class="data-grid"
-    :class="[themeClass, { clickable }]"
+    :class="{ clickable }"
+    :theme="gridTheme"
     :rowData="rowData"
     :columnDefs="columnDefs"
     :defaultColDef="defaultColDef || baseDefaultColDef"
@@ -44,43 +79,13 @@ const baseDefaultColDef: ColDef = {
 </template>
 
 <style scoped>
-/* Map ag-grid Quartz theme to the MES design tokens (Data-Dense Dashboard).
-   Works for both light and dark variants since the tokens flip with data-theme. */
 .data-grid {
   width: 100%;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-
-  --ag-font-family: var(--font-sans);
-  --ag-font-size: var(--text-sm);
-  --ag-foreground-color: var(--color-foreground);
-  --ag-background-color: var(--color-surface);
-  --ag-header-background-color: var(--color-muted);
-  --ag-header-foreground-color: var(--color-foreground);
-  --ag-header-column-resize-handle-color: var(--color-border-strong);
-  --ag-border-color: var(--color-border);
-  --ag-row-border-color: var(--color-border);
-  --ag-row-hover-color: var(--color-muted);
-  --ag-selected-row-background-color: var(--color-border);
-  --ag-odd-row-background-color: var(--color-surface);
-  --ag-control-panel-background-color: var(--color-surface);
-  --ag-borders: solid 1px;
-  --ag-border-radius: var(--radius-md);
-
-  /* Dense layout: tighter rows + headers for maximum data visibility */
-  --ag-grid-size: 5px;
-  --ag-row-height: 38px;
-  --ag-header-height: 40px;
-  --ag-cell-horizontal-padding: var(--space-3);
 }
 
 /* Tabular figures so numeric columns stay aligned */
 .data-grid :deep(.ag-cell) {
   font-variant-numeric: tabular-nums;
-}
-
-.data-grid :deep(.ag-header-cell-text) {
-  font-weight: var(--weight-semibold);
 }
 
 .data-grid.clickable :deep(.ag-row) {
