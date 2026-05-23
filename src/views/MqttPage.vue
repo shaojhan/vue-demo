@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { MqttService } from '@/api'
 import type { MQTTMessageItem } from '@/api'
 import {
@@ -17,8 +16,6 @@ import FilterBar from '@/components/FilterBar.vue'
 import DataGrid from '@/components/DataGrid.vue'
 import SubscriptionList from '@/components/SubscriptionList.vue'
 import FormField from '@/components/FormField.vue'
-
-const router = useRouter()
 
 // 連線狀態
 const connected = ref(false)
@@ -158,11 +155,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageLayout badge="MQTT">
-    <template #nav>
-      <NButton @click="router.push('/admin')">管理後台</NButton>
-      <NButton @click="router.push('/kafka')">Kafka 管理</NButton>
-    </template>
+  <PageLayout>
 
     <PageHeader title="MQTT 管理" description="管理 MQTT 連線、訂閱與訊息" />
 
@@ -182,7 +175,7 @@ onMounted(() => {
     <!-- 訂閱管理 -->
     <NCard title="訂閱管理" style="margin-bottom: 24px;">
       <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">{{ subscriptions.length }} 個主題</span>
+        <span style="font-size: 14px; color: var(--color-foreground-muted);">{{ subscriptions.length }} 個主題</span>
       </template>
 
       <NAlert v-if="subscribeError" type="error" :bordered="false" style="margin-bottom: 16px;">
@@ -226,7 +219,7 @@ onMounted(() => {
     <!-- 訊息紀錄 -->
     <NCard title="訊息紀錄">
       <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">共 {{ messageTotal }} 筆</span>
+        <span style="font-size: 14px; color: var(--color-foreground-muted);">共 {{ messageTotal }} 筆</span>
       </template>
 
       <FilterBar v-model="topicFilter" placeholder="依主題篩選..." />
@@ -251,7 +244,7 @@ onMounted(() => {
 .status-label {
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-foreground-secondary);
 }
 
 .subscribe-form {
@@ -259,7 +252,7 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border-strong);
 }
 
 .publish-form {

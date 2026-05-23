@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import StatCard from '@/components/StatCard.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -38,17 +39,15 @@ const statusText: Record<string, string> = {
     </header>
 
     <section class="kpi-grid" aria-label="關鍵指標">
-      <button
+      <StatCard
         v-for="kpi in kpis"
         :key="kpi.label"
-        type="button"
-        class="kpi-card"
+        :label="kpi.label"
+        :value="kpi.value"
+        :hint="kpi.hint"
+        clickable
         @click="router.push(kpi.to)"
-      >
-        <span class="kpi-label">{{ kpi.label }}</span>
-        <span class="kpi-value tabular-nums">{{ kpi.value }}</span>
-        <span class="kpi-hint">{{ kpi.hint }}</span>
-      </button>
+      />
     </section>
 
     <section class="integrations" aria-label="外部系統串接狀態">
@@ -100,42 +99,6 @@ const statusText: Record<string, string> = {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-4);
-}
-
-.kpi-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-5);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  text-align: left;
-  cursor: pointer;
-  transition: box-shadow var(--duration-base) var(--ease-out),
-    transform var(--duration-base) var(--ease-out);
-}
-
-.kpi-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-.kpi-label {
-  font-size: var(--text-sm);
-  color: var(--color-foreground-secondary);
-}
-
-.kpi-value {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-primary);
-}
-
-.kpi-hint {
-  font-size: var(--text-xs);
-  color: var(--color-foreground-muted);
 }
 
 .integration-grid {

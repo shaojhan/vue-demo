@@ -418,13 +418,13 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-muted);
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .message-item:hover {
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .message-item:last-child {
@@ -436,13 +436,13 @@ onMounted(() => {
 }
 
 .message-item.unread:hover {
-  background: #dbeafe;
+  background: var(--color-border);
 }
 
 .message-avatar {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -468,18 +468,18 @@ onMounted(() => {
 .message-from {
   font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .message-time {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
 }
 
 .message-subject {
   font-size: 14px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-foreground-secondary);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -488,7 +488,7 @@ onMounted(() => {
 
 .message-preview {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -502,7 +502,7 @@ onMounted(() => {
 
 .reply-count {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
 }
 
 /* 收件人搜尋 */
@@ -516,7 +516,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   margin-top: 4px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -532,20 +532,20 @@ onMounted(() => {
 }
 
 .recipient-option:hover {
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 .option-name {
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .option-email {
   display: block;
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 /* Thread */
@@ -553,7 +553,7 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-muted);
 }
 
 .thread-message:last-child {
@@ -561,16 +561,16 @@ onMounted(() => {
 }
 
 .thread-message.original {
-  background: #f8fafc;
+  background: var(--color-background);
   margin: -16px -24px 0;
   padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .thread-avatar {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -596,17 +596,17 @@ onMounted(() => {
 .thread-sender {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .thread-time {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
 }
 
 .thread-text {
   font-size: 14px;
-  color: #334155;
+  color: var(--color-foreground-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
 }

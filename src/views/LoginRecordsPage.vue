@@ -110,13 +110,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageLayout max-width="960px">
+  <PageLayout>
     <PageHeader title="登入紀錄" description="查看帳號的登入歷史記錄" />
 
     <!-- 我的登入紀錄 -->
     <NCard title="我的登入紀錄" style="margin-bottom: 24px;">
       <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">共 {{ myTotal }} 筆</span>
+        <span style="font-size: 14px; color: var(--color-foreground-muted);">共 {{ myTotal }} 筆</span>
       </template>
 
       <NSpin :show="myLoading">
@@ -135,7 +135,7 @@ onMounted(() => {
     <!-- 管理員：所有使用者紀錄 -->
     <NCard v-if="isAdmin" title="所有使用者登入紀錄">
       <template #header-extra>
-        <span style="font-size: 14px; color: #64748b;">共 {{ allTotal }} 筆</span>
+        <span style="font-size: 14px; color: var(--color-foreground-muted);">共 {{ allTotal }} 筆</span>
       </template>
 
       <FilterBar

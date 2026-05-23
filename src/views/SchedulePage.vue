@@ -223,8 +223,8 @@ const columnDefs = ref<ColDef<ScheduleListItem>[]>([
     width: 110,
     cellRenderer: (params: { value: boolean }) => {
       const synced = params.value
-      const color = synced ? '#16a34a' : '#94a3b8'
-      const bg = synced ? '#dcfce7' : '#f1f5f9'
+      const color = synced ? 'var(--color-success)' : 'var(--color-foreground-muted)'
+      const bg = synced ? '#dcfce7' : 'var(--color-muted)'
       const text = synced ? '已同步' : '未同步'
       return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${text}</span>`
     }
@@ -374,11 +374,11 @@ onMounted(() => {
           </div>
           <div>
             <div style="font-weight: 600;">Google Calendar</div>
-            <div v-if="googleLoading" style="font-size: 13px; color: #64748b;">檢查連接狀態中...</div>
-            <div v-else-if="googleStatus?.connected" style="font-size: 13px; color: #16a34a;">
+            <div v-if="googleLoading" style="font-size: 13px; color: var(--color-foreground-muted);">檢查連接狀態中...</div>
+            <div v-else-if="googleStatus?.connected" style="font-size: 13px; color: var(--color-success);">
               已連接 · {{ googleStatus.calendar_id }}
             </div>
-            <div v-else style="font-size: 13px; color: #64748b;">尚未連接</div>
+            <div v-else style="font-size: 13px; color: var(--color-foreground-muted);">尚未連接</div>
           </div>
         </div>
         <NButton
@@ -424,9 +424,9 @@ onMounted(() => {
     <button v-if="!chatOpen" class="chat-fab" @click="chatOpen = true">
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
         <path d="M14 3C7.925 3 3 7.149 3 12.25c0 2.876 1.57 5.444 4.025 7.118L5.5 24l5.053-2.27C11.635 21.91 12.798 22 14 22c6.075 0 11-4.149 11-9.25S20.075 3 14 3Z" fill="white"/>
-        <circle cx="10" cy="12.5" r="1.25" fill="#6366f1"/>
-        <circle cx="14" cy="12.5" r="1.25" fill="#6366f1"/>
-        <circle cx="18" cy="12.5" r="1.25" fill="#6366f1"/>
+        <circle cx="10" cy="12.5" r="1.25" fill="var(--color-primary)"/>
+        <circle cx="14" cy="12.5" r="1.25" fill="var(--color-primary)"/>
+        <circle cx="18" cy="12.5" r="1.25" fill="var(--color-primary)"/>
       </svg>
     </button>
 
@@ -627,7 +627,7 @@ onMounted(() => {
 .filter-group label {
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-foreground-muted);
 }
 
 /* Form */
@@ -645,7 +645,7 @@ onMounted(() => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   border: none;
   cursor: pointer;
   display: flex;
@@ -682,7 +682,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   color: white;
   flex-shrink: 0;
 }
@@ -715,7 +715,7 @@ onMounted(() => {
 
 .chat-welcome p {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-foreground-muted);
   margin: 0 0 16px;
 }
 
@@ -728,18 +728,18 @@ onMounted(() => {
 
 .chat-example-chip {
   padding: 6px 12px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: var(--color-muted);
+  border: 1px solid var(--color-border-strong);
   border-radius: 16px;
   font-size: 12px;
-  color: #475569;
+  color: var(--color-foreground-secondary);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .chat-example-chip:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
   background: #eef2ff;
 }
 
@@ -768,14 +768,14 @@ onMounted(() => {
 }
 
 .chat-msg.user .chat-msg-bubble {
-  background: #6366f1;
+  background: var(--color-primary);
   color: white;
   border-bottom-right-radius: 4px;
 }
 
 .chat-msg.assistant .chat-msg-bubble {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--color-muted);
+  color: var(--color-foreground);
   border-bottom-left-radius: 4px;
 }
 
@@ -786,7 +786,7 @@ onMounted(() => {
 .chat-actions {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border-strong);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -800,12 +800,12 @@ onMounted(() => {
 
 .chat-action-ok {
   font-size: 11px;
-  color: #10b981;
+  color: var(--color-success);
 }
 
 .chat-action-fail {
   font-size: 11px;
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
 .chat-typing {
@@ -817,7 +817,7 @@ onMounted(() => {
 .chat-typing span {
   width: 7px;
   height: 7px;
-  background: #94a3b8;
+  background: var(--color-foreground-muted);
   border-radius: 50%;
   animation: chat-typing 1.2s ease-in-out infinite;
 }
@@ -835,7 +835,7 @@ onMounted(() => {
   gap: 8px;
   align-items: flex-end;
   padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border-strong);
   flex-shrink: 0;
 }
 

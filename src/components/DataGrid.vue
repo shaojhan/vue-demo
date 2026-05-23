@@ -35,10 +35,42 @@ const baseDefaultColDef: ColDef = {
 </template>
 
 <style scoped>
+/* Map ag-grid Quartz theme to the MES design tokens (Data-Dense Dashboard). */
 .data-grid {
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
+
+  --ag-font-family: var(--font-sans);
+  --ag-font-size: var(--text-sm);
+  --ag-foreground-color: var(--color-foreground);
+  --ag-background-color: var(--color-surface);
+  --ag-header-background-color: var(--color-muted);
+  --ag-header-foreground-color: var(--color-foreground);
+  --ag-header-column-resize-handle-color: var(--color-border-strong);
+  --ag-border-color: var(--color-border);
+  --ag-row-border-color: var(--color-border);
+  --ag-row-hover-color: var(--color-muted);
+  --ag-selected-row-background-color: var(--color-border);
+  --ag-odd-row-background-color: var(--color-surface);
+  --ag-control-panel-background-color: var(--color-surface);
+  --ag-borders: solid 1px;
+  --ag-border-radius: var(--radius-md);
+
+  /* Dense layout: tighter rows + headers for maximum data visibility */
+  --ag-grid-size: 5px;
+  --ag-row-height: 38px;
+  --ag-header-height: 40px;
+  --ag-cell-horizontal-padding: var(--space-3);
+}
+
+/* Tabular figures so numeric columns stay aligned */
+.data-grid :deep(.ag-cell) {
+  font-variant-numeric: tabular-nums;
+}
+
+.data-grid :deep(.ag-header-cell-text) {
+  font-weight: var(--weight-semibold);
 }
 
 .data-grid.clickable :deep(.ag-row) {
