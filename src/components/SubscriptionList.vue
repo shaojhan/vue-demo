@@ -34,16 +34,16 @@ defineEmits<{
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-muted);
+  border: 1px solid var(--color-border-strong);
   border-radius: 8px;
 }
 
 .topic-name {
   font-family: monospace;
   font-size: 14px;
-  color: #1e293b;
-  background: #f1f5f9;
+  color: var(--color-foreground);
+  background: var(--color-muted);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -51,7 +51,7 @@ defineEmits<{
 .empty-hint {
   text-align: center;
   padding: 24px;
-  color: #94a3b8;
+  color: var(--color-foreground-muted);
   font-size: 14px;
 }
 </style>

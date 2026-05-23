@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
+import { useThemeStore } from '@/stores/theme'
 
 defineProps<{
   rowData: any[]
@@ -15,6 +17,13 @@ defineEmits<{
   'row-clicked': [event: RowClickedEvent]
 }>()
 
+const themeStore = useThemeStore()
+// Quartz ships a light and a dark variant; pick by app theme so the grid's
+// baked-in surface/border defaults match, then tokens refine the rest.
+const themeClass = computed(() =>
+  themeStore.mode === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'
+)
+
 const baseDefaultColDef: ColDef = {
   sortable: true,
   resizable: true
@@ -23,8 +32,8 @@ const baseDefaultColDef: ColDef = {
 
 <template>
   <ag-grid-vue
-    class="ag-theme-quartz data-grid"
-    :class="{ clickable }"
+    class="data-grid"
+    :class="[themeClass, { clickable }]"
     :rowData="rowData"
     :columnDefs="columnDefs"
     :defaultColDef="defaultColDef || baseDefaultColDef"
@@ -35,7 +44,8 @@ const baseDefaultColDef: ColDef = {
 </template>
 
 <style scoped>
-/* Map ag-grid Quartz theme to the MES design tokens (Data-Dense Dashboard). */
+/* Map ag-grid Quartz theme to the MES design tokens (Data-Dense Dashboard).
+   Works for both light and dark variants since the tokens flip with data-theme. */
 .data-grid {
   width: 100%;
   border-radius: var(--radius-md);

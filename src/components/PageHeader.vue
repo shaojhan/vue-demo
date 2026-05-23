@@ -30,13 +30,13 @@ defineProps<{
 .page-header h2 {
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-foreground);
   margin: 0 0 8px;
 }
 
 .page-header p {
   font-size: 15px;
-  color: #64748b;
+  color: var(--color-foreground-secondary);
   margin: 0;
 }
 
