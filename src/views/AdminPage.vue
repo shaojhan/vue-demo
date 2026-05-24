@@ -22,6 +22,7 @@ import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import FormField from '@/components/FormField.vue'
+import { departmentLabels } from '@/utils/department'
 
 const activeTab = ref('users')
 
@@ -59,14 +60,6 @@ watch(csvTaskStatus, (s) => {
     fetchEmployees()
   }
 })
-
-const departmentLabels: Record<Department, string> = {
-  [Department.HR]: '人力資源部',
-  [Department.IT]: '資訊科技部',
-  [Department.PR]: '公關部',
-  [Department.RD]: '研發部',
-  [Department.BD]: '業務部'
-}
 
 const departmentOptions = Object.entries(departmentLabels).map(([key, label]) => ({
   label: `${label} (${key})`,

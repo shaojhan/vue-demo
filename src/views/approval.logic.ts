@@ -1,6 +1,7 @@
-import type { ApprovalRequestResponse, ApprovalStepResponse } from '@/api'
+import type { ApprovalRequestResponse, ApprovalStepResponse, Department } from '@/api'
 import { ApprovalStatus } from '@/api/models/ApprovalStatus'
 import { ApprovalType } from '@/api/models/ApprovalType'
+import { departmentLabels } from '@/utils/department'
 
 /** 簽核類型 label 對照。 */
 export const typeLabels: Record<string, string> = {
@@ -41,6 +42,18 @@ export function isCurrentApprover(
   if (detail.status !== ApprovalStatus.PENDING) return false
   const currentStep = detail.steps.find((s) => s.step_order === detail.current_step_order)
   return currentStep?.approver_id === currentUserId && currentStep?.status === ApprovalStatus.PENDING
+}
+
+/** 判斷某步驟是否為流程當前進行中的步驟（用於時間軸高亮）。 */
+export function isActiveStep(
+  detail: ApprovalRequestResponse,
+  step: ApprovalStepResponse,
+): boolean {
+  return (
+    detail.status === ApprovalStatus.PENDING &&
+    step.step_order === detail.current_step_order &&
+    step.status === ApprovalStatus.PENDING
+  )
 }
 
 /** 判斷這筆申請是否為當前用戶所提。 */
@@ -111,6 +124,22 @@ export function getDetailInfo(detail: ApprovalRequestResponse): { items: DetailI
       { label: '收據連結', value: d.receipt_url || '-' },
     ],
   }
+}
+
+/**
+ * 審批人顯示資訊：姓名（缺則以 UUID 前 8 碼 fallback）與職位（部門 · 角色名稱）。
+ * 部門以中文標籤呈現；查無對照時退回原代碼。職位資訊皆缺時回空字串。
+ */
+export function getApproverDisplay(step: ApprovalStepResponse): { name: string; title: string } {
+  const name = step.approver_name?.trim()
+    || `審批人 ${(step.approver_id || '').slice(0, 8)}`
+
+  const dept = step.approver_department
+    ? (departmentLabels[step.approver_department as Department] || step.approver_department)
+    : ''
+  const title = [dept, step.approver_role_name].filter(Boolean).join(' · ')
+
+  return { name, title }
 }
 
 /** 步驟狀態 label。 */

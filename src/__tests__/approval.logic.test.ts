@@ -10,6 +10,8 @@ import {
   getDetailInfo,
   getStepStatusLabel,
   getStepStatusType,
+  getApproverDisplay,
+  isActiveStep,
 } from '@/views/approval.logic'
 
 function makeDetail(overrides: Partial<ApprovalRequestResponse> = {}): ApprovalRequestResponse {
@@ -115,6 +117,58 @@ describe('getDetailInfo', () => {
     expect(items[1]).toEqual({ label: '類別', value: '差旅' })
     expect(items[2]).toEqual({ label: '說明', value: '-' })
     expect(items[3]).toEqual({ label: '收據連結', value: '-' })
+  })
+})
+
+describe('getApproverDisplay', () => {
+  const base = { step_order: 1, approver_id: 'b3d65aa3-9c2e-4c32-bcb0-85fed366fdcb', status: ApprovalStatus.PENDING }
+
+  it('完整：姓名 + 部門中文 · 角色', () => {
+    const r = getApproverDisplay({ ...base, approver_name: '王小明', approver_department: 'RD', approver_role_name: '經理' } as ApprovalStepResponse)
+    expect(r).toEqual({ name: '王小明', title: '研發部 · 經理' })
+  })
+
+  it('缺姓名：以 approver_id 前 8 碼 fallback', () => {
+    const r = getApproverDisplay({ ...base, approver_department: 'HR', approver_role_name: '專員' } as ApprovalStepResponse)
+    expect(r.name).toBe('審批人 b3d65aa3')
+    expect(r.title).toBe('人力資源部 · 專員')
+  })
+
+  it('缺部門：title 只含角色', () => {
+    const r = getApproverDisplay({ ...base, approver_name: '李四', approver_role_name: '組長' } as ApprovalStepResponse)
+    expect(r.title).toBe('組長')
+  })
+
+  it('缺角色：title 只含部門中文', () => {
+    const r = getApproverDisplay({ ...base, approver_name: '李四', approver_department: 'IT' } as ApprovalStepResponse)
+    expect(r.title).toBe('資訊科技部')
+  })
+
+  it('職位皆缺：title 為空字串', () => {
+    const r = getApproverDisplay({ ...base, approver_name: '李四' } as ApprovalStepResponse)
+    expect(r.title).toBe('')
+  })
+
+  it('未知部門代碼：退回原代碼', () => {
+    const r = getApproverDisplay({ ...base, approver_name: '李四', approver_department: 'XX' } as unknown as ApprovalStepResponse)
+    expect(r.title).toBe('XX')
+  })
+})
+
+describe('isActiveStep', () => {
+  const step1 = { step_order: 1, approver_id: 'a1', status: ApprovalStatus.PENDING } as ApprovalStepResponse
+  it('PENDING 申請 + 當前步驟 + 步驟 PENDING → true', () => {
+    expect(isActiveStep(makeDetail({ current_step_order: 1, steps: [step1] }), step1)).toBe(true)
+  })
+  it('申請非 PENDING → false', () => {
+    expect(isActiveStep(makeDetail({ status: ApprovalStatus.APPROVED, current_step_order: 1 }), step1)).toBe(false)
+  })
+  it('非當前步驟 → false', () => {
+    expect(isActiveStep(makeDetail({ current_step_order: 2 }), step1)).toBe(false)
+  })
+  it('步驟已決議 → false', () => {
+    const done = { ...step1, status: ApprovalStatus.APPROVED } as ApprovalStepResponse
+    expect(isActiveStep(makeDetail({ current_step_order: 1 }), done)).toBe(false)
   })
 })
 

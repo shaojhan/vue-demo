@@ -23,6 +23,8 @@ import {
   getDetailInfo,
   getStepStatusLabel,
   getStepStatusType,
+  getApproverDisplay,
+  isActiveStep,
   validateLeaveForm,
   validateExpenseForm,
   isCurrentApprover as checkIsCurrentApprover,
@@ -395,22 +397,37 @@ onMounted(() => {
           </NDescriptionsItem>
         </NDescriptions>
 
-        <!-- 審批鏈 -->
-        <h4 style="margin: 0 0 12px; font-size: 14px; color: var(--color-foreground-secondary);">審批鏈</h4>
-        <div class="approval-steps">
-          <div v-for="step in currentDetail.steps" :key="step.step_order" class="approval-step">
-            <div class="step-indicator" :class="step.status.toLowerCase()">
-              {{ step.step_order }}
+        <!-- 審批鏈（直式時間軸） -->
+        <h4 style="margin: 0 0 12px; font-size: 14px; color: var(--color-foreground-secondary);">審批流程</h4>
+        <div class="timeline">
+          <div
+            v-for="(step, idx) in currentDetail.steps"
+            :key="step.step_order"
+            class="timeline-step"
+            :class="{ 'is-active': isActiveStep(currentDetail, step) }"
+          >
+            <!-- 左欄：節點 + 連接線 -->
+            <div class="timeline-rail">
+              <div class="timeline-node" :class="step.status.toLowerCase()">
+                <span v-if="step.status === ApprovalStatus.APPROVED">✓</span>
+                <span v-else-if="step.status === ApprovalStatus.REJECTED">✕</span>
+                <span v-else>{{ step.step_order }}</span>
+              </div>
+              <div v-if="idx < currentDetail.steps.length - 1" class="timeline-line" />
             </div>
-            <div class="step-info">
-              <div class="step-header">
-                <span class="step-approver">審批人：{{ step.approver_id }}</span>
-                <NTag :type="getStepStatusType(step)" size="tiny">
+            <!-- 右欄：內容 -->
+            <div class="timeline-body">
+              <div class="timeline-head">
+                <span class="timeline-name">{{ getApproverDisplay(step).name }}</span>
+                <NTag :type="getStepStatusType(step)" size="tiny" round>
                   {{ getStepStatusLabel(step) }}
                 </NTag>
               </div>
-              <div v-if="step.comment" class="step-comment">{{ step.comment }}</div>
-              <div v-if="step.decided_at" class="step-time">{{ formatDate(step.decided_at) }}</div>
+              <div v-if="getApproverDisplay(step).title" class="timeline-title">
+                {{ getApproverDisplay(step).title }}
+              </div>
+              <div v-if="step.comment" class="timeline-comment">{{ step.comment }}</div>
+              <div v-if="step.decided_at" class="timeline-time">{{ formatDate(step.decided_at) }}</div>
             </div>
           </div>
         </div>
@@ -464,81 +481,120 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* 審批鏈 */
-.approval-steps {
+/* 審批鏈：直式時間軸 */
+.timeline {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
-.approval-step {
+.timeline-step {
   display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-muted);
+  gap: 14px;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
-.approval-step:last-child {
-  border-bottom: none;
+/* 當前步驟整列強調 */
+.timeline-step.is-active {
+  background: rgba(245, 158, 11, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35);
 }
 
-.step-indicator {
+/* 左欄：節點 + 連接線 */
+.timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.timeline-node {
   width: 28px;
   height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1;
   flex-shrink: 0;
   background: var(--color-muted);
   color: var(--color-foreground-muted);
 }
 
-.step-indicator.approved {
-  background: #dcfce7;
+.timeline-node.approved {
+  background: rgba(34, 197, 94, 0.15);
   color: var(--color-success);
 }
 
-.step-indicator.rejected {
-  background: #fef2f2;
+.timeline-node.rejected {
+  background: rgba(239, 68, 68, 0.15);
   color: var(--color-destructive);
 }
 
-.step-indicator.pending {
-  background: #fef9c3;
-  color: #854d0e;
+.timeline-node.pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
 }
 
-.step-info {
+/* 當前步驟節點加環 */
+.timeline-step.is-active .timeline-node {
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+}
+
+.timeline-line {
+  flex: 1;
+  width: 2px;
+  min-height: 16px;
+  margin: 4px 0;
+  background: var(--color-muted);
+}
+
+/* 右欄：內容 */
+.timeline-body {
   flex: 1;
   min-width: 0;
+  padding-bottom: 18px;
 }
 
-.step-header {
+.timeline-step:last-child .timeline-body {
+  padding-bottom: 0;
+}
+
+.timeline-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  min-height: 28px;
 }
 
-.step-approver {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-foreground-secondary);
+.timeline-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-foreground);
 }
 
-.step-comment {
-  font-size: 13px;
-  color: var(--color-foreground-muted);
-  margin-top: 4px;
-}
-
-.step-time {
+.timeline-title {
   font-size: 12px;
   color: var(--color-foreground-muted);
   margin-top: 2px;
+}
+
+.timeline-comment {
+  font-size: 13px;
+  color: var(--color-foreground-secondary);
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--color-muted);
+  border-radius: 6px;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: var(--color-foreground-muted);
+  margin-top: 4px;
 }
 
 /* RWD */
