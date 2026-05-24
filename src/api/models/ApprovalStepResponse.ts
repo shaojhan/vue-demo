@@ -9,6 +9,10 @@ import type { ApprovalStatus } from './ApprovalStatus';
 export type ApprovalStepResponse = {
     step_order: number;
     approver_id: string;
+    approver_name?: (string | null);
+    approver_department?: (string | null);
+    approver_role_name?: (string | null);
+    approver_role_level?: (number | null);
     status: ApprovalStatus;
     comment?: (string | null);
     decided_at?: (string | null);

@@ -8,6 +8,8 @@ import type { MQTTPublishResponse } from '../models/MQTTPublishResponse';
 import type { MQTTStatusResponse } from '../models/MQTTStatusResponse';
 import type { MQTTSubscribeRequest } from '../models/MQTTSubscribeRequest';
 import type { MQTTSubscriptionResponse } from '../models/MQTTSubscriptionResponse';
+import type { MQTTSummaryTriggerRequest } from '../models/MQTTSummaryTriggerRequest';
+import type { MQTTSummaryTriggerResponse } from '../models/MQTTSummaryTriggerResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -119,6 +121,29 @@ export class MqttService {
                 'page': page,
                 'size': size,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Trigger Summary
+     * Manually trigger the MQTT daily digest task.
+     *
+     * Enqueues the summary task immediately and returns a task_id.
+     * Use GET /tasks/status/{task_id} to poll for completion.
+     * @param requestBody
+     * @returns MQTTSummaryTriggerResponse Successful Response
+     * @throws ApiError
+     */
+    public static mqttTriggerSummary(
+        requestBody: MQTTSummaryTriggerRequest,
+    ): CancelablePromise<MQTTSummaryTriggerResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/mqtt/summary/trigger',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

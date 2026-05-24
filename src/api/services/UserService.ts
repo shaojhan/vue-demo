@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { BindLineUserIdRequest } from '../models/BindLineUserIdRequest';
 import type { Body_login_user } from '../models/Body_login_user';
 import type { Body_upload_avatar } from '../models/Body_upload_avatar';
 import type { CurrentUserResponse } from '../models/CurrentUserResponse';
@@ -304,6 +305,26 @@ export class UserService {
                 'page': page,
                 'size': size,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Bind Line User Id
+     * Bind or unbind a LINE User ID to the current user's account.
+     * @param requestBody
+     * @returns void
+     * @throws ApiError
+     */
+    public static bindLineUserId(
+        requestBody: BindLineUserIdRequest,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/users/me/line-user-id',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
