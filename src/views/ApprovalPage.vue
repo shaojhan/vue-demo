@@ -5,7 +5,7 @@ import { ApprovalService } from '@/api'
 import { ApprovalStatus } from '@/api/models/ApprovalStatus'
 import { ApprovalType } from '@/api/models/ApprovalType'
 import { LeaveType } from '@/api/models/LeaveType'
-import type { ApprovalListItem, ApprovalRequestResponse, ApprovalStepResponse } from '@/api'
+import type { ApprovalListItem, ApprovalRequestResponse } from '@/api'
 import {
   NButton, NCard, NAlert, NInput, NInputNumber, NModal,
   NSpace, NTag, NTabs, NTabPane, NSelect, NDatePicker,
@@ -17,6 +17,17 @@ import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
 import { createApprovalColumns } from '@/views/approval.columns'
 import { formatDateTime, DATETIME_MINUTE } from '@/utils/datetime'
+import {
+  typeLabels,
+  statusLabels,
+  getDetailInfo,
+  getStepStatusLabel,
+  getStepStatusType,
+  validateLeaveForm,
+  validateExpenseForm,
+  isCurrentApprover as checkIsCurrentApprover,
+  isMyRequest as checkIsMyRequest,
+} from '@/views/approval.logic'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -94,14 +105,17 @@ const { loading: createSubmitting, error: createFormError, submit: submitCreate 
 
 const handleCreate = () => submitCreate(() => {
   if (createType.value === ApprovalType.LEAVE) {
-    if (!leaveStartDate.value || !leaveEndDate.value) return '請選擇請假日期'
-    if (!leaveReason.value.trim()) return '請輸入請假原因'
-  } else {
-    if (!expenseAmount.value || expenseAmount.value <= 0) return '請輸入有效金額'
-    if (!expenseCategory.value.trim()) return '請輸入費用類別'
-    if (!expenseDescription.value.trim()) return '請輸入費用說明'
+    return validateLeaveForm({
+      startDate: leaveStartDate.value,
+      endDate: leaveEndDate.value,
+      reason: leaveReason.value,
+    })
   }
-  return null
+  return validateExpenseForm({
+    amount: expenseAmount.value,
+    category: expenseCategory.value,
+    description: expenseDescription.value,
+  })
 })
 
 // === 詳情 Modal ===
@@ -185,18 +199,6 @@ const handleCancel = (id: string) => {
 }
 
 // === 格式化 ===
-const typeLabels: Record<string, string> = {
-  LEAVE: '請假',
-  EXPENSE: '費用報銷'
-}
-
-const statusLabels: Record<string, string> = {
-  PENDING: '審批中',
-  APPROVED: '已核准',
-  REJECTED: '已駁回',
-  CANCELLED: '已取消'
-}
-
 const statusColors: Record<string, string> = {
   PENDING: 'warning',
   APPROVED: 'success',
@@ -204,25 +206,11 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'default'
 }
 
-const leaveTypeLabels: Record<string, string> = {
-  ANNUAL: '特休',
-  SICK: '病假',
-  PERSONAL: '事假',
-  OTHER: '其他'
-}
-
 const formatDate = (dateStr: string | null | undefined) => formatDateTime(dateStr, DATETIME_MINUTE)
 
-// === 判斷當前用戶是否為待審批人 ===
-const isCurrentApprover = (detail: ApprovalRequestResponse) => {
-  if (detail.status !== ApprovalStatus.PENDING) return false
-  const currentStep = detail.steps.find(s => s.step_order === detail.current_step_order)
-  return currentStep?.approver_id === authStore.user?.id && currentStep?.status === ApprovalStatus.PENDING
-}
-
-const isMyRequest = (detail: ApprovalRequestResponse) => {
-  return detail.requester_id === authStore.user?.id
-}
+// === 注入當前用戶 id 的權限判斷（純邏輯見 approval.logic） ===
+const isCurrentApprover = (detail: ApprovalRequestResponse) => checkIsCurrentApprover(detail, authStore.user?.id)
+const isMyRequest = (detail: ApprovalRequestResponse) => checkIsMyRequest(detail, authStore.user?.id)
 
 // === AG Grid 欄位 ===
 const commonColumnDefs = createApprovalColumns({ typeLabels, statusLabels, formatDate })
@@ -264,45 +252,6 @@ const leaveTypeOptions = [
   { label: '事假', value: LeaveType.PERSONAL },
   { label: '其他', value: LeaveType.OTHER }
 ]
-
-// === 詳情中顯示 detail 資訊 ===
-const getDetailInfo = (detail: ApprovalRequestResponse) => {
-  if (detail.type === ApprovalType.LEAVE) {
-    const d = detail.detail as { leave_type?: string; start_date?: string; end_date?: string; reason?: string }
-    return {
-      items: [
-        { label: '假別', value: leaveTypeLabels[d.leave_type || ''] || d.leave_type || '-' },
-        { label: '開始日期', value: d.start_date || '-' },
-        { label: '結束日期', value: d.end_date || '-' },
-        { label: '原因', value: d.reason || '-' }
-      ]
-    }
-  } else {
-    const d = detail.detail as { amount?: number; category?: string; description?: string; receipt_url?: string }
-    return {
-      items: [
-        { label: '金額', value: d.amount != null ? `$${d.amount.toLocaleString()}` : '-' },
-        { label: '類別', value: d.category || '-' },
-        { label: '說明', value: d.description || '-' },
-        { label: '收據連結', value: d.receipt_url || '-' }
-      ]
-    }
-  }
-}
-
-const getStepStatusLabel = (step: ApprovalStepResponse) => {
-  return statusLabels[step.status] || step.status
-}
-
-const getStepStatusType = (step: ApprovalStepResponse): 'default' | 'success' | 'warning' | 'error' | 'info' => {
-  const map: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-    PENDING: 'warning',
-    APPROVED: 'success',
-    REJECTED: 'error',
-    CANCELLED: 'default'
-  }
-  return map[step.status] || 'default'
-}
 
 onMounted(() => {
   fetchMyRequests()
