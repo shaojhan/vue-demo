@@ -9,6 +9,14 @@ import {
   NDescriptions, NDescriptionsItem
 } from 'naive-ui'
 import { useLogout } from '@/composables/useLogout'
+import {
+  resolveAvatarUrl,
+  roleTagType as resolveRoleTagType,
+  roleLabel,
+  validateAvatarFile,
+  avatarUploadErrorMessage,
+  AVATAR_NETWORK_ERROR_MESSAGE,
+} from '@/views/user.logic'
 import PageLayout from '@/components/PageLayout.vue'
 import LoadingState from '@/components/LoadingState.vue'
 
@@ -26,43 +34,10 @@ const uploadError = ref('')
 const uploadSuccess = ref(false)
 const avatarCacheKey = ref(Date.now())
 
-// 從各種格式的 avatar 值中提取純檔名
-const getAvatarFilename = (avatar: string): string | null => {
-  if (avatar.startsWith('/api/users/avatar/')) {
-    return avatar.slice('/api/users/avatar/'.length) || null
-  }
-  // MinIO 直連 URL 或其他路徑：取最後一段
-  return avatar.split('/').pop() || null
-}
-
 // 計算完整頭像 URL（統一走 UserService.getAvatar 的端點，附加 cache-busting）
-const avatarUrl = computed(() => {
-  const avatar = currentUser.value?.profile?.avatar
-  if (!avatar) return null
+const avatarUrl = computed(() => resolveAvatarUrl(currentUser.value?.profile?.avatar, avatarCacheKey.value))
 
-  // 外部 URL（如 OAuth 頭像）：直接使用
-  if (avatar.startsWith('http') && !avatar.includes('localhost:9000/')) {
-    return avatar
-  }
-
-  const filename = getAvatarFilename(avatar)
-  if (!filename) return null
-
-  return `/api/users/avatar/${filename}?t=${avatarCacheKey.value}`
-})
-
-const roleLabel: Record<string, string> = {
-  ADMIN: '管理員',
-  EMPLOYEE: '員工',
-  NORMAL: '一般用戶'
-}
-
-const roleTagType = computed(() => {
-  const role = currentUser.value?.role
-  if (role === 'ADMIN') return 'warning'
-  if (role === 'EMPLOYEE') return 'info'
-  return 'default'
-})
+const roleTagType = computed(() => resolveRoleTagType(currentUser.value?.role))
 
 const fetchUser = async () => {
   try {
@@ -89,15 +64,9 @@ const handleAvatarChange = async (event: Event) => {
   const file = input.files?.[0]
   if (!file) return
 
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
-    uploadError.value = '不支援的檔案格式，請上傳 jpg, png, gif 或 webp 格式'
-    uploadSuccess.value = false
-    return
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    uploadError.value = '檔案大小超過 5MB 限制'
+  const validationError = validateAvatarFile(file)
+  if (validationError) {
+    uploadError.value = validationError
     uploadSuccess.value = false
     return
   }
@@ -114,11 +83,9 @@ const handleAvatarChange = async (event: Event) => {
   } catch (error) {
     if (error instanceof ApiError) {
       const detail = typeof error.body?.detail === 'string' ? error.body.detail : null
-      uploadError.value = detail
-        ? `上傳失敗：${detail}`
-        : `上傳失敗（錯誤 ${error.status}），請稍後再試`
+      uploadError.value = avatarUploadErrorMessage(error.status, detail)
     } else {
-      uploadError.value = '網路連線錯誤，請確認連線狀態'
+      uploadError.value = AVATAR_NETWORK_ERROR_MESSAGE
     }
   } finally {
     isUploading.value = false

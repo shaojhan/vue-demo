@@ -10,6 +10,14 @@ import {
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useTaskPolling } from '@/composables/useTaskPolling'
 import { createUserColumns, createEmployeeColumns } from '@/views/admin.columns'
+import {
+  assignEmployeeErrorMessage,
+  csvUploadErrorMessage,
+  csvTaskStatusLabel,
+  csvTaskStatusTagType,
+  csvProgressPercent,
+  NETWORK_ERROR_MESSAGE,
+} from '@/views/admin.logic'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
@@ -98,21 +106,9 @@ const handleSubmit = async () => {
     fetchUsers()
     fetchEmployees()
   } catch (error) {
-    if (error instanceof ApiError) {
-      if (error.status === 403) {
-        errorMessage.value = '您沒有管理員權限'
-      } else if (error.status === 404) {
-        errorMessage.value = '找不到該使用者'
-      } else if (error.status === 409) {
-        errorMessage.value = '該使用者已為員工'
-      } else if (error.status === 422) {
-        errorMessage.value = '輸入資料格式有誤'
-      } else {
-        errorMessage.value = '操作失敗，請稍後再試'
-      }
-    } else {
-      errorMessage.value = '網路連線錯誤，請檢查網路狀態'
-    }
+    errorMessage.value = error instanceof ApiError
+      ? assignEmployeeErrorMessage(error.status)
+      : NETWORK_ERROR_MESSAGE
   } finally {
     isLoading.value = false
   }
@@ -143,30 +139,14 @@ const handleCsvUpload = async () => {
     if (fileInput) fileInput.value = ''
     startCsvTask(task_id)
   } catch (error) {
-    if (error instanceof ApiError) {
-      if (error.status === 403) {
-        csvError.value = '您沒有管理員權限'
-      } else if (error.status === 422) {
-        csvError.value = 'CSV 格式錯誤，請檢查檔案內容'
-      } else {
-        csvError.value = '上傳失敗，請稍後再試'
-      }
-    } else {
-      csvError.value = '網路連線錯誤，請檢查網路狀態'
-    }
+    csvError.value = error instanceof ApiError
+      ? csvUploadErrorMessage(error.status)
+      : NETWORK_ERROR_MESSAGE
   } finally {
     csvUploading.value = false
   }
 }
 
-const csvTaskStatusLabel: Record<string, string> = {
-  PENDING: '排隊中',
-  STARTED: '處理中',
-  PROGRESS: '處理中',
-  SUCCESS: '完成',
-  FAILURE: '失敗',
-  REVOKED: '已取消'
-}
 </script>
 
 <template>
@@ -288,7 +268,7 @@ const csvTaskStatusLabel: Record<string, string> = {
           <div v-if="csvTaskId" class="task-progress" style="margin-bottom: 16px;">
             <div class="task-progress-header">
               <div class="task-progress-info">
-                <NTag :type="csvTaskStatus === 'SUCCESS' ? 'success' : csvTaskStatus === 'FAILURE' ? 'error' : csvTaskStatus === 'REVOKED' ? 'warning' : 'info'" size="small">
+                <NTag :type="csvTaskStatusTagType(csvTaskStatus)" size="small">
                   {{ csvTaskStatusLabel[csvTaskStatus] || csvTaskStatus }}
                 </NTag>
                 <span class="task-id">{{ csvTaskId }}</span>
@@ -307,7 +287,7 @@ const csvTaskStatusLabel: Record<string, string> = {
             <div v-else-if="csvTaskStatus === 'PROGRESS' && csvTaskProgress" class="task-progress-body">
               <NProgress
                 type="line"
-                :percentage="Math.round(csvTaskProgress.percent ?? 0)"
+                :percentage="csvProgressPercent(csvTaskProgress)"
                 :show-indicator="true"
                 status="success"
               />
