@@ -16,6 +16,7 @@ import { useModal } from '@/composables/useModal'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
 import { createScheduleColumns } from '@/views/schedule.columns'
 import { formatDateTime as fmtDateTime, DATETIME_MINUTE } from '@/utils/datetime'
+import { validateScheduleForm } from '@/views/schedule.logic'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -124,11 +125,11 @@ const openEditModal = (schedule: ScheduleListItem) => {
 }
 
 // 儲存排程
-const handleSave = () => submitForm(() => {
-  if (!formTitle.value.trim()) return '請輸入標題'
-  if (!formStartTime.value || !formEndTime.value) return '請選擇開始和結束時間'
-  return null
-})
+const handleSave = () => submitForm(() => validateScheduleForm({
+  title: formTitle.value,
+  startTime: formStartTime.value,
+  endTime: formEndTime.value,
+}))
 
 // 開啟詳情
 const openDetail = async (scheduleId: string) => {

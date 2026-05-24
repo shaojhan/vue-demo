@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { ref, h, onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { UserService } from '@/api'
-import type { LoginRecordItem } from '@/api'
 import {
-  NCard, NSpin, NTag
+  NCard, NSpin
 } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
 import { NDataTable } from 'naive-ui'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { formatDateTime, DATETIME_SECOND } from '@/utils/datetime'
+import { createMyLoginColumns, createAllLoginColumns } from '@/views/loginRecords.columns'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
@@ -47,46 +46,8 @@ const {
 
 const formatTime = (iso: string) => formatDateTime(iso, DATETIME_SECOND)
 
-const myColumns: DataTableColumns<LoginRecordItem> = [
-  {
-    title: '登入時間',
-    key: 'created_at',
-    width: 180,
-    render: (row) => formatTime(row.created_at)
-  },
-  { title: 'IP 位址', key: 'ip_address', width: 140 },
-  {
-    title: '結果',
-    key: 'success',
-    width: 80,
-    render: (row) => h(NTag, {
-      size: 'small',
-      type: row.success ? 'success' : 'error',
-      bordered: false
-    }, () => row.success ? '成功' : '失敗')
-  },
-  {
-    title: '失敗原因',
-    key: 'failure_reason',
-    render: (row) => row.failure_reason || '-'
-  },
-  {
-    title: 'User Agent',
-    key: 'user_agent',
-    ellipsis: { tooltip: true },
-    render: (row) => row.user_agent || '-'
-  }
-]
-
-const allColumns: DataTableColumns<LoginRecordItem> = [
-  {
-    title: '使用者',
-    key: 'username',
-    width: 120,
-    render: (row) => h('strong', row.username)
-  },
-  ...myColumns
-]
+const myColumns = createMyLoginColumns(formatTime)
+const allColumns = createAllLoginColumns(formatTime)
 
 const handleFilterSearch = () => {
   fetchAllRecords(1)
