@@ -15,6 +15,7 @@ import type { ColDef, RowClickedEvent } from 'ag-grid-community'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
+import { createApprovalColumns } from '@/views/approval.columns'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -230,48 +231,7 @@ const isMyRequest = (detail: ApprovalRequestResponse) => {
 }
 
 // === AG Grid 欄位 ===
-const commonColumnDefs: ColDef<ApprovalListItem>[] = [
-  {
-    headerName: '類型',
-    field: 'type',
-    width: 110,
-    cellRenderer: (params: { value: string }) => {
-      const label = typeLabels[params.value] || params.value
-      const bg = params.value === 'LEAVE' ? 'var(--color-border)' : '#fef3c7'
-      const color = params.value === 'LEAVE' ? 'var(--color-primary-hover)' : '#92400e'
-      return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${label}</span>`
-    }
-  },
-  {
-    headerName: '狀態',
-    field: 'status',
-    width: 110,
-    cellRenderer: (params: { value: string }) => {
-      const label = statusLabels[params.value] || params.value
-      const colorMap: Record<string, { bg: string; color: string }> = {
-        PENDING: { bg: '#fef9c3', color: '#854d0e' },
-        APPROVED: { bg: '#dcfce7', color: 'var(--color-success)' },
-        REJECTED: { bg: '#fef2f2', color: 'var(--color-destructive)' },
-        CANCELLED: { bg: 'var(--color-muted)', color: 'var(--color-foreground-muted)' }
-      }
-      const { bg, color } = colorMap[params.value] || { bg: 'var(--color-muted)', color: 'var(--color-foreground-muted)' }
-      return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${label}</span>`
-    }
-  },
-  {
-    headerName: '建立時間',
-    field: 'created_at',
-    flex: 1,
-    minWidth: 160,
-    valueFormatter: (params) => formatDate(params.value)
-  },
-  {
-    headerName: '當前步驟',
-    field: 'current_step_order',
-    width: 100,
-    valueFormatter: (params) => params.value != null ? `第 ${params.value} 步` : '-'
-  }
-]
+const commonColumnDefs = createApprovalColumns({ typeLabels, statusLabels, formatDate })
 
 const myColumnDefs = ref<ColDef<ApprovalListItem>[]>([...commonColumnDefs])
 const pendingColumnDefs = ref<ColDef<ApprovalListItem>[]>([...commonColumnDefs])
