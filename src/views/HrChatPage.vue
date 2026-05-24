@@ -6,6 +6,7 @@ import {
   NButton, NInput, NSpin, NTag, useDialog
 } from 'naive-ui'
 import { formatRelativeTime } from '@/utils/datetime'
+import { approvalToolLabels, shouldSendOnEnter } from '@/views/chat.logic'
 
 const dialog = useDialog()
 
@@ -115,7 +116,7 @@ const handleSend = async () => {
 
 // Enter 送出
 const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (shouldSendOnEnter(e)) {
     e.preventDefault()
     handleSend()
   }
@@ -145,14 +146,8 @@ const handleDelete = (conv: ConversationListItem) => {
 // 格式化時間（相對時間）
 const formatTime = formatRelativeTime
 
-// 工具名稱對照
-const toolLabels: Record<string, string> = {
-  approve_request: '批准申請',
-  reject_request: '拒絕申請',
-  list_approvals: '查詢簽核',
-  get_approval_detail: '查看詳情',
-  list_pending: '查詢待審',
-}
+// 工具名稱對照（見 chat.logic）
+const toolLabels = approvalToolLabels
 
 onMounted(() => {
   fetchConversations()

@@ -11,6 +11,7 @@ import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
 import { formatRelativeTime } from '@/utils/datetime'
+import { shouldSearchRecipient, validateComposeForm } from '@/views/messages.logic'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -71,7 +72,7 @@ const fetchUnreadCount = async () => {
 
 // 搜尋收件人
 const searchRecipients = async () => {
-  if (!recipientSearch.value || recipientSearch.value.length < 2) {
+  if (!shouldSearchRecipient(recipientSearch.value)) {
     recipientOptions.value = []
     return
   }
@@ -113,10 +114,11 @@ const { loading: composeSending, error: composeError, submit: submitCompose } = 
   }, 1500)
 })
 
-const handleSendMessage = () => submitCompose(() => {
-  if (!composeRecipientId.value || !composeSubject.value.trim() || !composeContent.value.trim()) return '請填寫所有欄位'
-  return null
-})
+const handleSendMessage = () => submitCompose(() => validateComposeForm({
+  recipientId: composeRecipientId.value,
+  subject: composeSubject.value,
+  content: composeContent.value,
+}))
 
 // 開啟訊息對話
 const openThread = async (messageId: number) => {
