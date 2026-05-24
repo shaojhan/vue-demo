@@ -15,6 +15,7 @@ import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
 import { createScheduleColumns } from '@/views/schedule.columns'
+import { formatDateTime as fmtDateTime, DATETIME_MINUTE } from '@/utils/datetime'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -176,16 +177,7 @@ const clearFilter = () => {
 }
 
 // 格式化日期時間
-const formatDateTime = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+const formatDateTime = (dateStr: string) => fmtDateTime(dateStr, DATETIME_MINUTE)
 
 // AG Grid 欄位定義
 const columnDefs = ref(createScheduleColumns(formatDateTime))

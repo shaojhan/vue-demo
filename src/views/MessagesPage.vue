@@ -10,6 +10,7 @@ import {
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
+import { formatRelativeTime } from '@/utils/datetime'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -182,23 +183,8 @@ const handleDelete = async (messageId: number) => {
   })
 }
 
-// 格式化日期
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-  if (days === 0) {
-    return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-  } else if (days === 1) {
-    return '昨天'
-  } else if (days < 7) {
-    return `${days} 天前`
-  } else {
-    return date.toLocaleDateString('zh-TW')
-  }
-}
+// 格式化日期（相對時間）
+const formatDate = (dateStr: string) => formatRelativeTime(dateStr)
 
 // Tab label with badge
 const inboxLabel = computed(() => unreadCount.value > 0 ? `收件匣 (${unreadCount.value})` : '收件匣')

@@ -9,6 +9,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { NDataTable } from 'naive-ui'
 import { usePaginatedList } from '@/composables/usePaginatedList'
+import { formatDateTime, DATETIME_SECOND } from '@/utils/datetime'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
@@ -44,17 +45,7 @@ const {
   { pageSize: 10 }
 )
 
-const formatTime = (iso: string) => {
-  const d = new Date(iso)
-  return d.toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
+const formatTime = (iso: string) => formatDateTime(iso, DATETIME_SECOND)
 
 const myColumns: DataTableColumns<LoginRecordItem> = [
   {

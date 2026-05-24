@@ -16,6 +16,7 @@ import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
 import { createApprovalColumns } from '@/views/approval.columns'
+import { formatDateTime, DATETIME_MINUTE } from '@/utils/datetime'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -210,14 +211,7 @@ const leaveTypeLabels: Record<string, string> = {
   OTHER: '其他'
 }
 
-const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-TW', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
+const formatDate = (dateStr: string | null | undefined) => formatDateTime(dateStr, DATETIME_MINUTE)
 
 // === 判斷當前用戶是否為待審批人 ===
 const isCurrentApprover = (detail: ApprovalRequestResponse) => {

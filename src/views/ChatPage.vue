@@ -5,6 +5,7 @@ import type { ConversationListItem, MessageItem, ActionTakenItem } from '@/api'
 import {
   NButton, NInput, NSpin, NTag, useDialog
 } from 'naive-ui'
+import { formatRelativeTime } from '@/utils/datetime'
 
 const dialog = useDialog()
 
@@ -141,18 +142,8 @@ const handleDelete = (conv: ConversationListItem) => {
   })
 }
 
-// 格式化時間
-const formatTime = (dateStr?: string | null) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (days === 0) return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days} 天前`
-  return d.toLocaleDateString('zh-TW')
-}
+// 格式化時間（相對時間）
+const formatTime = formatRelativeTime
 
 // 工具名稱對照
 const toolLabels: Record<string, string> = {

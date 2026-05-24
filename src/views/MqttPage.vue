@@ -8,6 +8,7 @@ import {
 import type { ColDef } from 'ag-grid-community'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { formatDateTime } from '@/utils/datetime'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -117,10 +118,7 @@ watch(topicFilter, () => {
 })
 
 // 格式化時間
-const formatTime = (dateStr: string) => {
-  const d = new Date(dateStr)
-  return d.toLocaleString('zh-TW')
-}
+const formatTime = (dateStr: string) => formatDateTime(dateStr)
 
 // AG Grid 欄位定義
 const msgColumnDefs = ref<ColDef<MQTTMessageItem>[]>([
