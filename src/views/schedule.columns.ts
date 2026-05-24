@@ -43,10 +43,11 @@ export function createScheduleColumns(
       width: 110,
       cellRenderer: (params: { value: boolean }) => {
         const synced = params.value
-        const color = synced ? 'var(--color-success)' : 'var(--color-foreground-muted)'
-        const bg = synced ? '#dcfce7' : 'var(--color-muted)'
+        const color = synced ? 'var(--color-success)' : 'var(--color-warning)'
+        const bg = synced ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)'
+        const border = synced ? 'rgba(34, 197, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)'
         const text = synced ? '已同步' : '未同步'
-        return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${text}</span>`
+        return `<span style="display:inline-flex;align-items:center;line-height:1;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;color:${color};background:${bg};border:1px solid ${border};vertical-align:middle;">${text}</span>`
       }
     }
   ]
