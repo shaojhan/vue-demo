@@ -3,17 +3,18 @@ import { ref, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ScheduleService, ChatService, ApiError } from '@/api'
-import { isAllowedRedirectUrl } from '@/utils/urlValidation'
-import type { ScheduleListItem, ScheduleResponse, GoogleStatusResponse, MessageItem, ActionTakenItem } from '@/api'
+import type { ScheduleListItem, ScheduleResponse, MessageItem, ActionTakenItem } from '@/api'
 import {
   NButton, NCard, NAlert, NInput, NModal,
   NSpace, NTag, NCheckbox, NDatePicker, NDescriptions,
   NDescriptionsItem, useDialog
 } from 'naive-ui'
-import type { ColDef, RowClickedEvent } from 'ag-grid-community'
+import type { RowClickedEvent } from 'ag-grid-community'
 import { usePaginatedList } from '@/composables/usePaginatedList'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useModal } from '@/composables/useModal'
+import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
+import { createScheduleColumns } from '@/views/schedule.columns'
 import PageLayout from '@/components/PageLayout.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -26,12 +27,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 const dialog = useDialog()
 
-
-// Google Calendar 狀態
-const googleStatus = ref<GoogleStatusResponse | null>(null)
-const googleLoading = ref(false)
-const googleConnecting = ref(false)
-const showGoogleSuccess = ref(false)
+// Google Calendar 狀態與授權流程
+const {
+  googleStatus, googleLoading, googleConnecting, showGoogleSuccess,
+  isAdmin, fetchGoogleStatus, connectGoogle, flashSuccess
+} = useGoogleCalendar()
 
 // 日期篩選 (timestamp)
 const filterStartFrom = ref<number | null>(null)
@@ -188,81 +188,11 @@ const formatDateTime = (dateStr: string) => {
 }
 
 // AG Grid 欄位定義
-const columnDefs = ref<ColDef<ScheduleListItem>[]>([
-  { headerName: '標題', field: 'title', flex: 2, minWidth: 120 },
-  { headerName: '地點', field: 'location', flex: 1, minWidth: 100 },
-  {
-    headerName: '開始時間',
-    field: 'start_time',
-    flex: 1.5,
-    minWidth: 150,
-    valueFormatter: (params) => params.value ? formatDateTime(params.value) : ''
-  },
-  {
-    headerName: '結束時間',
-    field: 'end_time',
-    flex: 1.5,
-    minWidth: 150,
-    valueFormatter: (params) => params.value ? formatDateTime(params.value) : ''
-  },
-  {
-    headerName: '全天',
-    field: 'all_day',
-    width: 80,
-    valueFormatter: (params) => params.value ? '是' : '否'
-  },
-  {
-    headerName: '建立者',
-    valueGetter: (params) => params.data?.creator?.username || '',
-    flex: 1,
-    minWidth: 80
-  },
-  {
-    headerName: '同步狀態',
-    field: 'is_synced',
-    width: 110,
-    cellRenderer: (params: { value: boolean }) => {
-      const synced = params.value
-      const color = synced ? 'var(--color-success)' : 'var(--color-foreground-muted)'
-      const bg = synced ? '#dcfce7' : 'var(--color-muted)'
-      const text = synced ? '已同步' : '未同步'
-      return `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;color:${color};background:${bg};">${text}</span>`
-    }
-  }
-])
+const columnDefs = ref(createScheduleColumns(formatDateTime))
 
 const onRowClicked = (event: RowClickedEvent<ScheduleListItem>) => {
   if (event.data) {
     openDetail(event.data.id)
-  }
-}
-
-// 取得 Google Calendar 狀態
-const fetchGoogleStatus = async () => {
-  if (authStore.user?.role !== 'ADMIN') return
-
-  googleLoading.value = true
-  try {
-    googleStatus.value = await ScheduleService.getGoogleStatus()
-  } catch {
-    googleStatus.value = null
-  } finally {
-    googleLoading.value = false
-  }
-}
-
-// 連接 Google Calendar
-const connectGoogle = async () => {
-  googleConnecting.value = true
-  try {
-    const res = await ScheduleService.getGoogleAuthUrl()
-    if (!isAllowedRedirectUrl(res.auth_url)) {
-      googleConnecting.value = false
-      return
-    }
-    window.location.href = res.auth_url
-  } catch {
-    googleConnecting.value = false
   }
 }
 
@@ -344,10 +274,7 @@ onMounted(() => {
   fetchGoogleStatus()
 
   if (route.query.google_connected === '1') {
-    showGoogleSuccess.value = true
-    setTimeout(() => {
-      showGoogleSuccess.value = false
-    }, 5000)
+    flashSuccess()
     router.replace({ path: '/schedules' })
   }
 })
@@ -361,7 +288,7 @@ onMounted(() => {
     </NAlert>
 
     <!-- Google Calendar 狀態 (Admin only) -->
-    <NCard v-if="authStore.user?.role === 'ADMIN'" size="small" style="margin-bottom: 24px;">
+    <NCard v-if="isAdmin" size="small" style="margin-bottom: 24px;">
       <div class="google-status-row">
         <div class="google-status-info">
           <div class="google-icon">
