@@ -10,6 +10,19 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  build: {
+    // ag-grid 為單一大型 chunk（lazy 載入），調高警告門檻避免雜訊
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // 核心框架分離為穩定 vendor chunk，利於長期快取
+          'vue-vendor': ['vue', 'vue-router', 'pinia', 'pinia-plugin-persistedstate'],
+          'ag-grid': ['ag-grid-community', 'ag-grid-vue3']
+        }
+      }
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',

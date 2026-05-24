@@ -1,9 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
-import { themeQuartz, colorSchemeDark } from 'ag-grid-community'
+import { themeQuartz, colorSchemeDark, ClientSideRowModelModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, RowClickedEvent } from 'ag-grid-community'
 import { useThemeStore } from '@/stores/theme'
+
+// 註冊 ag-grid module。放在此唯一使用 grid 的元件，使 ag-grid 隨 lazy view code-split，
+// 不進入主 bundle。模組頂層程式碼在首次 import 時執行一次，等同單次註冊。
+//
+// 只註冊實際用到的功能：ClientSideRowModelModule 已含排序(Sort)；欄寬調整、cellRenderer、
+// valueFormatter/valueGetter、domLayout autoHeight 皆為核心功能，無需額外 module。
+// ValidationModule 僅 dev 載入（會印出缺漏 module 的明確提示），production build 自動排除。
+ModuleRegistry.registerModules([ClientSideRowModelModule])
+if (import.meta.env.DEV) {
+  import('ag-grid-community').then(({ ValidationModule }) => {
+    ModuleRegistry.registerModules([ValidationModule])
+  })
+}
 
 defineProps<{
   rowData: any[]
