@@ -191,18 +191,22 @@ const roleLabel = computed(() =>
             </NIcon>
           </NButton>
 
+          <span class="topbar-divider" aria-hidden="true" />
+
           <NDropdown
             trigger="click"
             :options="userOptions"
             @select="handleUserAction"
           >
             <NButton text class="user-trigger" aria-label="使用者選單">
-              <NAvatar round size="small" class="user-avatar">
-                {{ userLabel.charAt(0).toUpperCase() }}
-              </NAvatar>
-              <span class="user-meta">
-                <span class="user-name">{{ userLabel }}</span>
-                <span class="user-role">{{ roleLabel }}</span>
+              <span class="user-trigger-inner">
+                <NAvatar round size="small" class="user-avatar">
+                  {{ userLabel.charAt(0).toUpperCase() }}
+                </NAvatar>
+                <span class="user-meta">
+                  <span class="user-name">{{ userLabel }}</span>
+                  <span class="user-role">{{ roleLabel }}</span>
+                </span>
               </span>
             </NButton>
           </NDropdown>
@@ -255,7 +259,7 @@ const roleLabel = computed(() =>
   align-items: center;
   justify-content: space-between;
   height: var(--topbar-height);
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-6);
   background: var(--color-surface);
 }
 
@@ -269,14 +273,28 @@ const roleLabel = computed(() =>
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-5);
+}
+
+.theme-toggle {
+  padding: 0 var(--space-2);
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
 }
 
 .user-trigger {
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.user-trigger-inner {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
+  gap: var(--space-3);
 }
 
 .user-avatar {
@@ -289,7 +307,7 @@ const roleLabel = computed(() =>
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  line-height: 1.2;
+  line-height: 1.35;
 }
 
 .user-name {
